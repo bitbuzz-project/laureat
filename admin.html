@@ -25,6 +25,117 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
+        .admin-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-size: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .login-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .default-credentials {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .default-credentials h4 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -291,99 +402,250 @@
             th, td {
                 padding: 10px 5px;
             }
+
+            .admin-info, .logout-btn {
+                position: static;
+                display: block;
+                text-align: center;
+                margin: 5px 0;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>لوحة تحكم طلبات الديبلوم</h1>
-        <p>إدارة ومراجعة طلبات سحب الديبلومات</p>
-    </div>
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <div class="login-container">
+            <h2 class="login-title">تسجيل دخول الإدارة</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">اسم المستخدم</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="login-btn" id="login-btn">
+                    تسجيل الدخول
+                </button>
+                
+                <div id="login-error" class="error-message" style="display: none;"></div>
+            </form>
 
-    <div class="container">
-        <!-- Statistics Cards -->
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number stat-pending" id="pending-count">-</div>
-                <div>طلبات معلقة</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number stat-approved" id="approved-count">-</div>
-                <div>طلبات موافق عليها</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number stat-rejected" id="rejected-count">-</div>
-                <div>طلبات مرفوضة</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number stat-total" id="total-count">-</div>
-                <div>إجمالي الطلبات</div>
+            <div class="default-credentials">
+                <h4>بيانات الدخول الافتراضية:</h4>
+                <p><strong>اسم المستخدم:</strong> admin</p>
+                <p><strong>كلمة المرور:</strong> admin123</p>
+                <small style="color: #6c757d;">يُنصح بتغيير كلمة المرور بعد أول تسجيل دخول</small>
             </div>
         </div>
+    </div>
 
-        <!-- Requests Table -->
-        <div class="requests-table">
-            <div class="table-header">
-                <h2>جميع الطلبات</h2>
-                <div class="filter-controls">
-                    <select id="status-filter" onchange="filterRequests()">
-                        <option value="">جميع الحالات</option>
-                        <option value="pending">معلق</option>
-                        <option value="approved">موافق عليه</option>
-                        <option value="rejected">مرفوض</option>
-                    </select>
-                    <button class="btn btn-view" onclick="refreshData()">تحديث</button>
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" style="display: none;">
+        <div class="header">
+            <div class="admin-info">
+                مرحباً، <span id="admin-name"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
+            <h1>لوحة تحكم طلبات الديبلوم</h1>
+            <p>إدارة ومراجعة طلبات سحب الديبلومات</p>
+        </div>
+
+        <div class="container">
+            <!-- Statistics Cards -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number stat-pending" id="pending-count">-</div>
+                    <div>طلبات معلقة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-approved" id="approved-count">-</div>
+                    <div>طلبات موافق عليها</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-rejected" id="rejected-count">-</div>
+                    <div>طلبات مرفوضة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-total" id="total-count">-</div>
+                    <div>إجمالي الطلبات</div>
                 </div>
             </div>
-            
-            <div id="loading" class="loading">
-                <div class="spinner"></div>
-                <p>جاري تحميل البيانات...</p>
-            </div>
 
-            <div id="table-container" style="display: none;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>رقم الطلب</th>
-                            <th>اسم الطالب</th>
-                            <th>رمز الطالب</th>
-                            <th>تاريخ الطلب</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="requests-tbody">
-                    </tbody>
-                </table>
-            </div>
+            <!-- Requests Table -->
+            <div class="requests-table">
+                <div class="table-header">
+                    <h2>جميع الطلبات</h2>
+                    <div class="filter-controls">
+                        <select id="status-filter" onchange="filterRequests()">
+                            <option value="">جميع الحالات</option>
+                            <option value="pending">معلق</option>
+                            <option value="approved">موافق عليه</option>
+                            <option value="rejected">مرفوض</option>
+                        </select>
+                        <button class="btn btn-view" onclick="refreshData()">تحديث</button>
+                    </div>
+                </div>
+                
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>جاري تحميل البيانات...</p>
+                </div>
 
-            <div id="no-requests" class="no-requests" style="display: none;">
-                <p>لا توجد طلبات</p>
+                <div id="table-container" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>اسم الطالب</th>
+                                <th>رمز الطالب</th>
+                                <th>تاريخ الطلب</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requests-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="no-requests" class="no-requests" style="display: none;">
+                    <p>لا توجد طلبات</p>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Request Details Modal -->
-    <div id="request-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2>تفاصيل الطلب</h2>
-            
-            <div id="modal-content">
-                <!-- Content will be loaded here -->
+        <!-- Request Details Modal -->
+        <div id="request-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2>تفاصيل الطلب</h2>
+                
+                <div id="modal-content">
+                    <!-- Content will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'admin_api.php'; // Create this file for admin operations
+        const API_URL = 'admin_api.php';
         let allRequests = [];
+        let currentAdmin = null;
 
-        // Load data when page loads
+        // Check authentication on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadRequests();
+            checkAuthentication();
         });
+
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            adminLogin();
+        });
+
+        async function checkAuthentication() {
+            try {
+                const response = await fetch(`${API_URL}?action=check_auth`);
+                const result = await response.json();
+                
+                if (result.success && result.authenticated) {
+                    currentAdmin = result.admin;
+                    showDashboard();
+                    loadRequests();
+                } else {
+                    showLogin();
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                showLogin();
+            }
+        }
+
+        async function adminLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-btn');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                loginBtn.textContent = 'جاري تسجيل الدخول...';
+                loginBtn.disabled = true;
+
+                const response = await fetch(`${API_URL}?action=login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentAdmin = result.admin;
+                    errorDiv.style.display = 'none';
+                    showDashboard();
+                    loadRequests();
+                } else {
+                    errorDiv.textContent = result.message;
+                    errorDiv.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = 'خطأ في الاتصال بالخادم';
+                errorDiv.style.display = 'block';
+            } finally {
+                loginBtn.textContent = 'تسجيل الدخول';
+                loginBtn.disabled = false;
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`${API_URL}?action=logout`, {
+                    method: 'POST'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            currentAdmin = null;
+            showLogin();
+            
+            // Clear form
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function showLogin() {
+            document.getElementById('login-screen').style.display = 'block';
+            document.getElementById('admin-dashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-dashboard').style.display = 'block';
+            
+            if (currentAdmin) {
+                document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.username;
+            }
+        }
 
         async function loadRequests() {
             try {
@@ -498,35 +760,38 @@
             modalContent.innerHTML = `
                 <div class="student-info">
                     <h3>بيانات الطالب</h3>
-                    <p><strong>الاسم (عربي):</strong> ${studentData.LIB_PRN_IND_ARB} ${studentData.LIB_NOM_IND_ARB}</p>
-                    <p><strong>الاسم (لاتيني):</strong> ${studentData.LIB_PR1_IND} ${studentData.LIB_NOM_PAT_IND}</p>
-                    <p><strong>رمز الطالب:</strong> ${studentData.COD_ETU}</p>
-                    <p><strong>رقم البطاقة الوطنية:</strong> ${studentData.CIN_IND}</p>
-                    <p><strong>تاريخ الميلاد:</strong> ${studentData.DATE_NAI_IND}</p>
-                    <p><strong>الجنس:</strong> ${studentData.COD_SEX_ETU === 'M' ? 'ذكر' : 'أنثى'}</p>
-                    <p><strong>مدينة الميلاد:</strong> ${studentData.LIB_VIL_NAI_ETU}</p>
+                    <p><strong>الاسم (عربي):</strong> ${studentData.LIB_PRN_IND_ARB || 'غير محدد'} ${studentData.LIB_NOM_IND_ARB || 'غير محدد'}</p>
+                    <p><strong>الاسم (لاتيني):</strong> ${studentData.LIB_PR1_IND || 'غير محدد'} ${studentData.LIB_NOM_PAT_IND || 'غير محدد'}</p>
+                    <p><strong>رمز الطالب:</strong> ${studentData.COD_ETU || 'غير محدد'}</p>
+                    <p><strong>رقم البطاقة الوطنية:</strong> ${studentData.CIN_IND || 'غير محدد'}</p>
+                    <p><strong>تاريخ الميلاد:</strong> ${studentData.DATE_NAI_IND || 'غير محدد'}</p>
+                    <p><strong>الجنس:</strong> ${studentData.COD_SEX_ETU === 'M' ? 'ذكر' : studentData.COD_SEX_ETU === 'F' ? 'أنثى' : 'غير محدد'}</p>
+                    <p><strong>مدينة الميلاد:</strong> ${studentData.LIB_VIL_NAI_ETU || 'غير محدد'}</p>
                 </div>
 
                 <h3>المستندات المرفقة</h3>
                 <div class="document-preview">
                     ${request.national_id_file ? `
                         <div class="document-item">
-                            <img src="uploads/${request.national_id_file}" alt="البطاقة الوطنية">
+                            <img src="uploads/${request.national_id_file}" alt="البطاقة الوطنية" onerror="this.style.display='none'">
                             <p>البطاقة الوطنية</p>
+                            <a href="uploads/${request.national_id_file}" target="_blank" style="color: #3498db; text-decoration: none;">عرض الملف</a>
                         </div>
-                    ` : ''}
+                    ` : '<div class="document-item"><p>البطاقة الوطنية: غير مرفقة</p></div>'}
                     ${request.success_cert_file ? `
                         <div class="document-item">
-                            <img src="uploads/${request.success_cert_file}" alt="شهادة النجاح">
+                            <img src="uploads/${request.success_cert_file}" alt="شهادة النجاح" onerror="this.style.display='none'">
                             <p>شهادة النجاح</p>
+                            <a href="uploads/${request.success_cert_file}" target="_blank" style="color: #3498db; text-decoration: none;">عرض الملف</a>
                         </div>
-                    ` : ''}
+                    ` : '<div class="document-item"><p>شهادة النجاح: غير مرفقة</p></div>'}
                     ${request.bac_cert_file ? `
                         <div class="document-item">
-                            <img src="uploads/${request.bac_cert_file}" alt="شهادة البكالوريا">
+                            <img src="uploads/${request.bac_cert_file}" alt="شهادة البكالوريا" onerror="this.style.display='none'">
                             <p>شهادة البكالوريا</p>
+                            <a href="uploads/${request.bac_cert_file}" target="_blank" style="color: #3498db; text-decoration: none;">عرض الملف</a>
                         </div>
-                    ` : ''}
+                    ` : '<div class="document-item"><p>شهادة البكالوريا: غير مرفقة</p></div>'}
                 </div>
 
                 <div class="notes-section">

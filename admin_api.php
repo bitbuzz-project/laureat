@@ -1,5 +1,5 @@
 <?php
-// admin_api.php - Admin API for managing diploma requests
+// admin_api.php - Complete Admin API for managing diploma requests
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -9,6 +9,9 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
+
+// Start session for authentication
+session_start();
 
 // Database configuration - same as api.php
 $host = 'localhost';
@@ -27,20 +30,143 @@ try {
 $action = $_GET['action'] ?? '';
 
 switch($action) {
+    case 'login':
+        adminLogin($pdo);
+        break;
+    case 'check_auth':
+        checkAuthentication();
+        break;
+    case 'logout':
+        adminLogout();
+        break;
     case 'get_requests':
-        getRequests($pdo);
+        if (isAuthenticated()) {
+            getRequests($pdo);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'غير مخول للوصول']);
+        }
         break;
     case 'update_status':
-        updateRequestStatus($pdo);
+        if (isAuthenticated()) {
+            updateRequestStatus($pdo);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'غير مخول للوصول']);
+        }
         break;
     case 'save_notes':
-        saveAdminNotes($pdo);
+        if (isAuthenticated()) {
+            saveAdminNotes($pdo);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'غير مخول للوصول']);
+        }
         break;
     case 'get_statistics':
-        getStatistics($pdo);
+        if (isAuthenticated()) {
+            getStatistics($pdo);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'غير مخول للوصول']);
+        }
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
+}
+
+function adminLogin($pdo) {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    
+    $username = $data['username'] ?? '';
+    $password = $data['password'] ?? '';
+    
+    // Create admin users table if it doesn't exist
+    createAdminUsersTable($pdo);
+    
+    // Check credentials
+    $stmt = $pdo->prepare("SELECT * FROM admin_users WHERE username = ? AND is_active = 1");
+    $stmt->execute([$username]);
+    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($admin && password_verify($password, $admin['password_hash'])) {
+        $_SESSION['admin_id'] = $admin['id'];
+        $_SESSION['admin_username'] = $admin['username'];
+        $_SESSION['admin_name'] = $admin['full_name'];
+        $_SESSION['admin_logged_in'] = true;
+        
+        // Update last login
+        $updateStmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
+        $updateStmt->execute([$admin['id']]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'admin' => [
+                'name' => $admin['full_name'],
+                'username' => $admin['username']
+            ]
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'اسم المستخدم أو كلمة المرور غير صحيحة'
+        ]);
+    }
+}
+
+function createAdminUsersTable($pdo) {
+    $createTable = "CREATE TABLE IF NOT EXISTS admin_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(100) NOT NULL,
+        email VARCHAR(100),
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP NULL,
+        INDEX idx_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $pdo->exec($createTable);
+    
+    // Create default admin user if none exists
+    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM admin_users");
+    $checkStmt->execute();
+    
+    if ($checkStmt->fetchColumn() == 0) {
+        // Create default admin user
+        $defaultPassword = password_hash('admin123', PASSWORD_DEFAULT);
+        $insertStmt = $pdo->prepare("INSERT INTO admin_users (username, password_hash, full_name, email) VALUES (?, ?, ?, ?)");
+        $insertStmt->execute(['admin', $defaultPassword, 'مدير النظام', 'admin@laureat.ma']);
+    }
+}
+
+function isAuthenticated() {
+    return isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+}
+
+function checkAuthentication() {
+    if (isAuthenticated()) {
+        echo json_encode([
+            'success' => true,
+            'authenticated' => true,
+            'admin' => [
+                'name' => $_SESSION['admin_name'] ?? '',
+                'username' => $_SESSION['admin_username'] ?? ''
+            ]
+        ]);
+    } else {
+        echo json_encode([
+            'success' => true,
+            'authenticated' => false
+        ]);
+    }
+}
+
+function adminLogout() {
+    session_destroy();
+    echo json_encode([
+        'success' => true,
+        'message' => 'تم تسجيل الخروج بنجاح'
+    ]);
 }
 
 function getRequests($pdo) {
@@ -107,7 +233,10 @@ function createSampleRequests($pdo) {
                 'LIB_PR1_IND' => 'HAJAR',
                 'LIB_NOM_IND_ARB' => 'فهمي',
                 'LIB_PRN_IND_ARB' => 'هاجر',
-                'CIN_IND' => 'W369920'
+                'CIN_IND' => 'W369920',
+                'DATE_NAI_IND' => '1992-06-29',
+                'COD_SEX_ETU' => 'F',
+                'LIB_VIL_NAI_ETU' => 'الدار البيضاء'
             ]),
             'status' => 'pending'
         ],
@@ -120,15 +249,19 @@ function createSampleRequests($pdo) {
                 'LIB_PR1_IND' => 'YASSINE',
                 'LIB_NOM_IND_ARB' => 'هاشيمي',
                 'LIB_PRN_IND_ARB' => 'ياسين',
-                'CIN_IND' => 'W372149'
+                'CIN_IND' => 'W372149',
+                'DATE_NAI_IND' => '1993-03-15',
+                'COD_SEX_ETU' => 'M',
+                'LIB_VIL_NAI_ETU' => 'الرباط'
             ]),
-            'status' => 'approved'
+            'status' => 'approved',
+            'admin_notes' => 'تم الموافقة على الطلب. يمكن استلام الديبلوم من الإدارة.'
         ]
     ];
     
     $insertQuery = "INSERT IGNORE INTO diploma_requests 
-                    (request_number, cod_etu, student_data, status) 
-                    VALUES (?, ?, ?, ?)";
+                    (request_number, cod_etu, student_data, status, admin_notes) 
+                    VALUES (?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($insertQuery);
     
     foreach ($sampleRequests as $request) {
@@ -136,7 +269,8 @@ function createSampleRequests($pdo) {
             $request['request_number'],
             $request['cod_etu'],
             $request['student_data'],
-            $request['status']
+            $request['status'],
+            $request['admin_notes'] ?? null
         ]);
     }
 }

@@ -49,7 +49,7 @@
             padding: 40px;
         }
 
-        .login-form {
+        .login-form, .status-check {
             text-align: center;
         }
 
@@ -97,6 +97,13 @@
 
         .btn:hover {
             transform: translateY(-2px);
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 10px 20px;
+            font-size: 1rem;
+            margin: 5px;
         }
 
         .step-container {
@@ -257,6 +264,25 @@
             margin-top: 20px;
         }
 
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .status-pending {
+            border-left: 5px solid #f39c12;
+        }
+
+        .status-approved {
+            border-left: 5px solid #27ae60;
+        }
+
+        .status-rejected {
+            border-left: 5px solid #e74c3c;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -284,8 +310,41 @@
         </div>
 
         <div class="content">
+            <!-- Initial Choice -->
+            <div id="initial-choice" class="step-container active">
+                <h2 style="margin-bottom: 30px; color: #2c3e50; text-align: center;">اختر الخدمة</h2>
+                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-small" onclick="showNewRequest()">طلب جديد</button>
+                    <button class="btn btn-small" onclick="showStatusCheck()">تتبع طلب موجود</button>
+                </div>
+            </div>
+
+            <!-- Status Check -->
+            <div id="status-check-step" class="step-container">
+                <div class="status-check">
+                    <h2 style="margin-bottom: 30px; color: #2c3e50;">تتبع حالة الطلب</h2>
+                    
+                    <div class="form-group">
+                        <label for="status-student-code">رمز الطالب (COD_ETU)</label>
+                        <input type="text" id="status-student-code" placeholder="أدخل رمز الطالب">
+                    </div>
+
+                    <button class="btn" onclick="checkRequestStatus()">تحقق من حالة الطلب</button>
+                    
+                    <div id="status-result" style="display: none;">
+                        <!-- Status result will be shown here -->
+                    </div>
+                    
+                    <div id="status-error" class="error-message" style="display: none;">
+                        لم يتم العثور على طلب لهذا الرمز
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
+                </div>
+            </div>
+
             <!-- Login Step -->
-            <div id="login-step" class="step-container active">
+            <div id="login-step" class="step-container">
                 <div class="login-form">
                     <h2 style="margin-bottom: 30px; color: #2c3e50;">تسجيل الدخول</h2>
                     
@@ -304,6 +363,8 @@
                     <div id="login-error" class="error-message" style="display: none;">
                         رمز الطالب أو تاريخ الميلاد غير صحيح
                     </div>
+
+                    <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
                 </div>
             </div>
 
@@ -338,7 +399,7 @@
                         <div class="file-upload" onclick="document.getElementById('national-id').click()">
                             <div class="upload-icon">📄</div>
                             <div class="upload-text">اضغط لرفع صورة البطاقة الوطنية</div>
-                            <input type="file" id="national-id" accept="image/*" onchange="handleFileUpload(this, 'national-id-uploaded')">
+                            <input type="file" id="national-id" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'national-id-uploaded')">
                         </div>
                         <div class="uploaded-file" id="national-id-uploaded">
                             <span></span>
@@ -351,7 +412,7 @@
                         <div class="file-upload" onclick="document.getElementById('success-cert').click()">
                             <div class="upload-icon">🎓</div>
                             <div class="upload-text">اضغط لرفع شهادة النجاح</div>
-                            <input type="file" id="success-cert" accept="image/*" onchange="handleFileUpload(this, 'success-cert-uploaded')">
+                            <input type="file" id="success-cert" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'success-cert-uploaded')">
                         </div>
                         <div class="uploaded-file" id="success-cert-uploaded">
                             <span></span>
@@ -364,7 +425,7 @@
                         <div class="file-upload" onclick="document.getElementById('bac-cert').click()">
                             <div class="upload-icon">📜</div>
                             <div class="upload-text">اضغط لرفع شهادة البكالوريا</div>
-                            <input type="file" id="bac-cert" accept="image/*" onchange="handleFileUpload(this, 'bac-cert-uploaded')">
+                            <input type="file" id="bac-cert" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'bac-cert-uploaded')">
                         </div>
                         <div class="uploaded-file" id="bac-cert-uploaded">
                             <span></span>
@@ -410,26 +471,129 @@
                     <h2 style="color: #155724; margin-bottom: 15px;">✅ تم إرسال الطلب بنجاح</h2>
                     <p>تم إرسال طلب سحب الديبلوم بنجاح. سيتم مراجعة طلبك والتواصل معك قريباً.</p>
                     <p style="margin-top: 15px;"><strong>رقم الطلب:</strong> <span id="request-number"></span></p>
-                    <button class="btn" onclick="location.reload()" style="margin-top: 20px;">طلب جديد</button>
+                    <button class="btn" onclick="location.reload()" style="margin-top: 20px;">العودة للبداية</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration - Update this URL to match your server
-        const API_URL = 'api.php'; // تأكد أن هذا المسار صحيح
-        
-        // للتشخيص، جرب هذا أولاً:
-        // const API_URL = 'debug_connection.php';
+        // Configuration
+        const API_URL = 'api.php';
         
         let currentStudent = null;
         let currentStep = 1;
         let uploadedFiles = {};
         let updatedFields = {};
 
+        function showNewRequest() {
+            document.getElementById('initial-choice').classList.remove('active');
+            document.getElementById('login-step').classList.add('active');
+        }
+
+        function showStatusCheck() {
+            document.getElementById('initial-choice').classList.remove('active');
+            document.getElementById('status-check-step').classList.add('active');
+        }
+
+        function goBack() {
+            // Hide all steps
+            document.querySelectorAll('.step-container').forEach(step => {
+                step.classList.remove('active');
+            });
+            // Show initial choice
+            document.getElementById('initial-choice').classList.add('active');
+            
+            // Reset forms
+            document.getElementById('student-code').value = '';
+            document.getElementById('birth-date').value = '';
+            document.getElementById('status-student-code').value = '';
+            
+            // Hide error messages
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('status-error').style.display = 'none';
+            document.getElementById('status-result').style.display = 'none';
+        }
+
+        async function checkRequestStatus() {
+            const studentCode = document.getElementById('status-student-code').value.trim();
+            const errorDiv = document.getElementById('status-error');
+            const resultDiv = document.getElementById('status-result');
+
+            if (!studentCode) {
+                errorDiv.textContent = 'يرجى إدخال رمز الطالب';
+                errorDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}?action=check_status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        cod_etu: studentCode
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.requests && result.requests.length > 0) {
+                    errorDiv.style.display = 'none';
+                    displayRequestStatus(result.requests);
+                } else {
+                    errorDiv.textContent = result.message || 'لم يتم العثور على طلب لهذا الرمز';
+                    errorDiv.style.display = 'block';
+                    resultDiv.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Status check error:', error);
+                errorDiv.textContent = 'خطأ في الاتصال بالخادم';
+                errorDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+            }
+        }
+
+        function displayRequestStatus(requests) {
+            const resultDiv = document.getElementById('status-result');
+            const statusMap = {
+                'pending': 'معلق',
+                'approved': 'موافق عليه',
+                'rejected': 'مرفوض'
+            };
+
+            const statusClassMap = {
+                'pending': 'status-pending',
+                'approved': 'status-approved',
+                'rejected': 'status-rejected'
+            };
+
+            resultDiv.innerHTML = requests.map(request => {
+                const studentData = JSON.parse(request.student_data || '{}');
+                const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
+                const createdDate = new Date(request.created_at).toLocaleDateString('ar-SA');
+                
+                return `
+                    <div class="status-card ${statusClassMap[request.status]}">
+                        <h3 style="margin-bottom: 15px; color: #2c3e50;">طلب رقم: ${request.request_number}</h3>
+                        <p><strong>الاسم:</strong> ${studentName || 'غير محدد'}</p>
+                        <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
+                        <p><strong>الحالة:</strong> ${statusMap[request.status]}</p>
+                        ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
+                        ${request.status === 'approved' ? '<p style="color: #27ae60; font-weight: bold;">✅ يمكنك الآن استلام الديبلوم من الإدارة</p>' : ''}
+                        ${request.status === 'rejected' ? '<p style="color: #e74c3c; font-weight: bold;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            resultDiv.style.display = 'block';
+        }
+
         async function login() {
-            const studentCode = document.getElementById('student-code').value;
+            const studentCode = document.getElementById('student-code').value.trim();
             const birthDate = document.getElementById('birth-date').value;
             const errorDiv = document.getElementById('login-error');
 
@@ -440,7 +604,6 @@
             }
 
             try {
-                // Show loading
                 const loginBtn = event.target;
                 const originalText = loginBtn.textContent;
                 loginBtn.textContent = 'جاري التحقق...';
@@ -463,7 +626,6 @@
                     currentStudent = result.student;
                     errorDiv.style.display = 'none';
                     
-                    // Show main steps
                     document.getElementById('login-step').classList.remove('active');
                     document.getElementById('main-steps').classList.add('active');
                     
@@ -473,29 +635,15 @@
                     errorDiv.style.display = 'block';
                 }
 
-                // Reset button
                 loginBtn.textContent = originalText;
                 loginBtn.disabled = false;
 
             } catch (error) {
-                console.error('Login error details:', error);
-                
-                // معلومات أكثر تفصيلاً للتشخيص
-                let errorMessage = 'خطأ في الاتصال بالخادم';
-                
-                if (error.name === 'TypeError') {
-                    errorMessage = 'تحقق من وجود ملف api.php';
-                } else if (error.message.includes('NetworkError')) {
-                    errorMessage = 'مشكلة في الشبكة - تحقق من الاتصال';
-                } else if (error.message.includes('404')) {
-                    errorMessage = 'ملف API غير موجود - تحقق من المسار';
-                }
-                
-                errorDiv.textContent = errorMessage + ': ' + error.message;
+                console.error('Login error:', error);
+                errorDiv.textContent = 'خطأ في الاتصال بالخادم';
                 errorDiv.style.display = 'block';
                 
-                // Reset button
-                const loginBtn = document.querySelector('.btn');
+                const loginBtn = document.querySelector('#login-step .btn');
                 loginBtn.textContent = 'دخول';
                 loginBtn.disabled = false;
             }
@@ -521,7 +669,7 @@
                     <div class="data-value ${field.editable ? 'editable' : ''}" 
                          data-field="${field.key}" 
                          ${field.editable ? 'onclick="editField(this)"' : ''}>
-                        ${currentStudent[field.key]}
+                        ${currentStudent[field.key] || ''}
                     </div>
                 </div>
             `).join('');
@@ -530,25 +678,25 @@
         function editField(element) {
             if (element.classList.contains('editing')) return;
             
-            const currentValue = element.textContent;
+            const currentValue = (element.textContent || '').trim();
             element.classList.add('editing');
-            element.innerHTML = `<input type="text" value="${currentValue}" onblur="saveField(this)" onkeypress="handleEnter(event, this)" style="width: 100%; border: none; background: transparent; text-align: right;">`;
-            element.querySelector('input').focus();
+            element.innerHTML = `<input type="text" value="${currentValue}" onblur="saveField(this)" onkeypress="handleEnter(event, this)" style="width: 100%; border: none; background: transparent; text-align: right; padding: 0; font-family: inherit;">`;
+            const input = element.querySelector('input');
+            input.focus();
+            input.select();
         }
 
         function saveField(input) {
             const container = input.parentElement;
             const field = container.dataset.field;
-            const newValue = input.value;
+            const newValue = input.value.trim();
             
-            // Track updated fields
             updatedFields[field] = newValue;
             currentStudent[field] = newValue;
             
             container.classList.remove('editing');
             container.textContent = newValue;
             
-            // Save to database immediately
             saveUpdatedFields();
         }
 
@@ -570,7 +718,7 @@
                 const result = await response.json();
                 if (result.success) {
                     console.log('Data updated successfully');
-                    updatedFields = {}; // Clear updated fields
+                    updatedFields = {};
                 } else {
                     console.error('Failed to update data:', result.message);
                 }
@@ -581,13 +729,20 @@
 
         function handleEnter(event, input) {
             if (event.key === 'Enter') {
-                saveField(input);
+                input.blur();
             }
         }
 
         function handleFileUpload(input, uploadedId) {
             const file = input.files[0];
             if (file) {
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت');
+                    input.value = '';
+                    return;
+                }
+
                 const uploadedDiv = document.getElementById(uploadedId);
                 uploadedDiv.querySelector('span').textContent = file.name;
                 uploadedDiv.classList.add('show');
@@ -611,7 +766,6 @@
 
         function nextStep() {
             if (currentStep === 1) {
-                // Move to step 2
                 document.getElementById('step1').style.display = 'none';
                 document.getElementById('step2').style.display = 'block';
                 document.getElementById('step1-indicator').classList.add('completed');
@@ -619,7 +773,6 @@
                 document.getElementById('step2-indicator').classList.add('active');
                 currentStep = 2;
             } else if (currentStep === 2) {
-                // Move to step 3
                 document.getElementById('step2').style.display = 'none';
                 document.getElementById('step3').style.display = 'block';
                 document.getElementById('step2-indicator').classList.add('completed');
@@ -650,9 +803,9 @@
 
         function populateSummary() {
             document.getElementById('summary-name').textContent = 
-                `${currentStudent.LIB_PRN_IND_ARB} ${currentStudent.LIB_NOM_IND_ARB}`;
-            document.getElementById('summary-code').textContent = currentStudent.COD_ETU;
-            document.getElementById('summary-cin').textContent = currentStudent.CIN_IND;
+                `${currentStudent.LIB_PRN_IND_ARB || ''} ${currentStudent.LIB_NOM_IND_ARB || ''}`.trim() || 'غير محدد';
+            document.getElementById('summary-code').textContent = currentStudent.COD_ETU || 'غير محدد';
+            document.getElementById('summary-cin').textContent = currentStudent.CIN_IND || 'غير محدد';
             
             const documentsList = document.getElementById('summary-documents');
             const documents = [
@@ -668,29 +821,26 @@
 
         async function submitRequest() {
             try {
-                // Show loading
                 const submitBtn = event.target;
                 const originalText = submitBtn.textContent;
                 submitBtn.textContent = 'جاري الإرسال...';
                 submitBtn.disabled = true;
 
-                // Prepare form data for file upload
                 const formData = new FormData();
                 formData.append('cod_etu', currentStudent.COD_ETU);
-                formData.append('request_data', JSON.stringify(currentStudent));
+                formData.append('student_data', JSON.stringify(currentStudent));
 
-                // Append files
-                const fileInputs = ['national-id', 'success-cert', 'bac-cert'];
-                fileInputs.forEach(inputId => {
+                // Append files with proper names
+                const fileMapping = {
+                    'national-id': 'national_id_file',
+                    'success-cert': 'success_cert_file',
+                    'bac-cert': 'bac_cert_file'
+                };
+
+                Object.keys(fileMapping).forEach(inputId => {
                     const input = document.getElementById(inputId);
                     if (input.files[0]) {
-                        // Map input IDs to expected names
-                        const fileMap = {
-                            'national-id': 'national_id',
-                            'success-cert': 'success_cert',
-                            'bac-cert': 'bac_cert'
-                        };
-                        formData.append(fileMap[inputId], input.files[0]);
+                        formData.append(fileMapping[inputId], input.files[0]);
                     }
                 });
 
@@ -702,12 +852,9 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Hide main steps
                     document.getElementById('main-steps').classList.remove('active');
-                    
-                    // Show success message
                     document.getElementById('success-step').classList.add('active');
-                    document.getElementById('request-number').textContent = result.request_number;
+                    document.getElementById('request-number').textContent = result.request_number || 'غير محدد';
                 } else {
                     alert('خطأ في إرسال الطلب: ' + result.message);
                     submitBtn.textContent = originalText;
@@ -718,10 +865,11 @@
                 console.error('Submit error:', error);
                 alert('خطأ في الاتصال بالخادم');
                 
-                // Reset button
                 const submitBtn = document.querySelector('.btn-success');
-                submitBtn.textContent = 'إرسال الطلب';
-                submitBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.textContent = 'إرسال الطلب';
+                    submitBtn.disabled = false;
+                }
             }
         }
 

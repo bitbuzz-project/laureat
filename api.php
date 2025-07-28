@@ -1,7 +1,7 @@
 <?php
-// api.php - مع حل مشكلة CORS للاختبار المحلي
+// api.php - Updated with file upload and status check functionality
 
-// إعداد CORS Headers لحل مشكلة الوصول المحلي
+// CORS Headers
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// إظهار الأخطاء للتشخيص
+// Error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
@@ -26,14 +26,20 @@ function sendJsonResponse($data, $httpCode = 200) {
     exit();
 }
 
+// Create uploads directory if it doesn't exist
+$uploadsDir = 'uploads';
+if (!file_exists($uploadsDir)) {
+    mkdir($uploadsDir, 0755, true);
+}
+
 try {
-    // Database configuration - عدّل هذه الإعدادات
+    // Database configuration
     $host = 'localhost';
     $dbname = 'laureat';
     $username = 'root';
     $password = '';
 
-    // Test database connection first
+    // Database connection
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -43,6 +49,9 @@ try {
             'message' => 'خطأ في الاتصال بقاعدة البيانات: ' . $e->getMessage()
         ], 500);
     }
+
+    // Create diploma_requests table if it doesn't exist
+    createDiplomaRequestsTable($pdo);
 
     // Get action
     $action = $_GET['action'] ?? 'test';
@@ -56,7 +65,8 @@ try {
                 'server_info' => [
                     'php_version' => phpversion(),
                     'server' => $_SERVER['SERVER_NAME'] ?? 'localhost',
-                    'method' => $_SERVER['REQUEST_METHOD']
+                    'method' => $_SERVER['REQUEST_METHOD'],
+                    'uploads_dir' => is_writable($uploadsDir) ? 'writable' : 'not writable'
                 ]
             ]);
             break;
@@ -71,6 +81,10 @@ try {
 
         case 'submit_request':
             handleSubmitRequest($pdo);
+            break;
+
+        case 'check_status':
+            handleCheckStatus($pdo);
             break;
 
         default:
@@ -88,9 +102,29 @@ try {
     ], 500);
 }
 
+function createDiplomaRequestsTable($pdo) {
+    $createTable = "CREATE TABLE IF NOT EXISTS diploma_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        request_number VARCHAR(20) UNIQUE NOT NULL,
+        cod_etu VARCHAR(20) NOT NULL,
+        student_data TEXT,
+        national_id_file VARCHAR(255),
+        success_cert_file VARCHAR(255),
+        bac_cert_file VARCHAR(255),
+        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        admin_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_cod_etu (cod_etu),
+        INDEX idx_status (status),
+        INDEX idx_request_number (request_number)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $pdo->exec($createTable);
+}
+
 function handleLogin($pdo) {
     try {
-        // Get JSON input
         $input = file_get_contents('php://input');
         $data = json_decode($input, true);
 
@@ -138,12 +172,7 @@ function handleLogin($pdo) {
         } else {
             sendJsonResponse([
                 'success' => false,
-                'message' => 'تاريخ الميلاد غير صحيح',
-                'debug_info' => [
-                    'stored_date' => $student['DATE_NAI_IND'],
-                    'converted_date' => $storedDate,
-                    'input_date' => $date_nai
-                ]
+                'message' => 'تاريخ الميلاد غير صحيح'
             ]);
         }
 
@@ -156,19 +185,197 @@ function handleLogin($pdo) {
 }
 
 function handleUpdateStudent($pdo) {
-    // Implementation for updating student data
-    sendJsonResponse([
-        'success' => true,
-        'message' => 'تم تحديث البيانات (قيد التطوير)'
-    ]);
+    try {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+
+        $codEtu = $data['cod_etu'] ?? '';
+        $updates = $data['updates'] ?? [];
+
+        if (empty($codEtu) || empty($updates)) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'بيانات غير صحيحة'
+            ]);
+        }
+
+        // Build update query
+        $setClause = [];
+        $values = [];
+        
+        foreach ($updates as $field => $value) {
+            // Validate field names to prevent SQL injection
+            $allowedFields = [
+                'LIB_NOM_IND_ARB', 'LIB_PRN_IND_ARB', 'LIB_NOM_PAT_IND', 
+                'LIB_PR1_IND', 'CIN_IND', 'LIB_VIL_NAI_ETU'
+            ];
+            
+            if (in_array($field, $allowedFields)) {
+                $setClause[] = "$field = ?";
+                $values[] = $value;
+            }
+        }
+
+        if (!empty($setClause)) {
+            $values[] = $codEtu;
+            $query = "UPDATE laureat SET " . implode(', ', $setClause) . " WHERE COD_ETU = ?";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($values);
+        }
+
+        sendJsonResponse([
+            'success' => true,
+            'message' => 'تم تحديث البيانات بنجاح'
+        ]);
+
+    } catch (Exception $e) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في تحديث البيانات: ' . $e->getMessage()
+        ], 500);
+    }
 }
 
 function handleSubmitRequest($pdo) {
-    // Implementation for submitting diploma request
-    sendJsonResponse([
-        'success' => true,
-        'message' => 'تم إرسال الطلب (قيد التطوير)'
-    ]);
+    try {
+        $codEtu = $_POST['cod_etu'] ?? '';
+        $studentData = $_POST['student_data'] ?? '';
+
+        if (empty($codEtu) || empty($studentData)) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'بيانات الطلب غير مكتملة'
+            ]);
+        }
+
+        // Generate unique request number
+        $requestNumber = 'REQ-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        
+        // Check if request number already exists
+        $checkStmt = $pdo->prepare("SELECT id FROM diploma_requests WHERE request_number = ?");
+        $checkStmt->execute([$requestNumber]);
+        
+        // If exists, generate a new one
+        while ($checkStmt->fetch()) {
+            $requestNumber = 'REQ-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $checkStmt->execute([$requestNumber]);
+        }
+
+        // Handle file uploads
+        $uploadedFiles = [];
+        $fileFields = ['national_id_file', 'success_cert_file', 'bac_cert_file'];
+        
+        foreach ($fileFields as $field) {
+            if (isset($_FILES[$field]) && $_FILES[$field]['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES[$field];
+                
+                // Validate file size (5MB max)
+                if ($file['size'] > 5 * 1024 * 1024) {
+                    sendJsonResponse([
+                        'success' => false,
+                        'message' => 'حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت'
+                    ]);
+                }
+                
+                // Validate file type
+                $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+                
+                if (!in_array($mimeType, $allowedTypes)) {
+                    sendJsonResponse([
+                        'success' => false,
+                        'message' => 'نوع الملف غير مدعوم. يُقبل فقط: JPG, PNG, GIF, PDF'
+                    ]);
+                }
+                
+                // Generate unique filename
+                $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+                $filename = $requestNumber . '_' . $field . '_' . time() . '.' . $extension;
+                $targetPath = 'uploads/' . $filename;
+                
+                // Move uploaded file
+                if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    $uploadedFiles[$field] = $filename;
+                } else {
+                    sendJsonResponse([
+                        'success' => false,
+                        'message' => 'خطأ في رفع الملف: ' . $field
+                    ]);
+                }
+            }
+        }
+
+        // Insert request into database
+        $query = "INSERT INTO diploma_requests 
+                  (request_number, cod_etu, student_data, national_id_file, success_cert_file, bac_cert_file, status) 
+                  VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([
+            $requestNumber,
+            $codEtu,
+            $studentData,
+            $uploadedFiles['national_id_file'] ?? null,
+            $uploadedFiles['success_cert_file'] ?? null,
+            $uploadedFiles['bac_cert_file'] ?? null
+        ]);
+
+        sendJsonResponse([
+            'success' => true,
+            'message' => 'تم إرسال الطلب بنجاح',
+            'request_number' => $requestNumber
+        ]);
+
+    } catch (Exception $e) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في إرسال الطلب: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+function handleCheckStatus($pdo) {
+    try {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+
+        $codEtu = trim($data['cod_etu'] ?? '');
+
+        if (empty($codEtu)) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'يرجى إدخال رمز الطالب'
+            ]);
+        }
+
+        // Get all requests for this student
+        $query = "SELECT * FROM diploma_requests WHERE cod_etu = ? ORDER BY created_at DESC";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$codEtu]);
+        
+        $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($requests)) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'لم يتم العثور على أي طلب لهذا الرمز'
+            ]);
+        }
+
+        sendJsonResponse([
+            'success' => true,
+            'requests' => $requests,
+            'message' => 'تم العثور على ' . count($requests) . ' طلب(ات)'
+        ]);
+
+    } catch (Exception $e) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في البحث عن الطلب: ' . $e->getMessage()
+        ], 500);
+    }
 }
 
 function convertTextDateToStandard($textDate) {
@@ -203,7 +410,6 @@ function convertTextDateToStandard($textDate) {
     // Handle European format like "29/6/1992" (D/M/YYYY)
     if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $textDate)) {
         $parts = explode('/', $textDate);
-        // Try to detect if it's D/M/Y or M/D/Y based on values
         $first = (int)$parts[0];
         $second = (int)$parts[1];
         
