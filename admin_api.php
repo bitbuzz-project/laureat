@@ -1,5 +1,5 @@
 <?php
-// admin_api.php - Complete Admin API for managing diploma requests
+// admin_api.php - Fixed Admin API with proper authentication and Arabic status options
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -171,7 +171,7 @@ function adminLogout() {
 
 function getRequests($pdo) {
     try {
-        // Create diploma_requests table if it doesn't exist
+        // Create diploma_requests table if it doesn't exist with updated status options
         $createTable = "CREATE TABLE IF NOT EXISTS diploma_requests (
             id INT AUTO_INCREMENT PRIMARY KEY,
             request_number VARCHAR(20) UNIQUE NOT NULL,
@@ -180,12 +180,13 @@ function getRequests($pdo) {
             national_id_file VARCHAR(255),
             success_cert_file VARCHAR(255),
             bac_cert_file VARCHAR(255),
-            status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            status ENUM('قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'قيد المعالجة',
             admin_notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_cod_etu (cod_etu),
-            INDEX idx_status (status)
+            INDEX idx_status (status),
+            UNIQUE KEY unique_student_request (cod_etu)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
         $pdo->exec($createTable);
@@ -238,7 +239,7 @@ function createSampleRequests($pdo) {
                 'COD_SEX_ETU' => 'F',
                 'LIB_VIL_NAI_ETU' => 'الدار البيضاء'
             ]),
-            'status' => 'pending'
+            'status' => 'قيد المعالجة'
         ],
         [
             'request_number' => 'REQ-' . date('Ymd') . '-0002',
@@ -254,7 +255,7 @@ function createSampleRequests($pdo) {
                 'COD_SEX_ETU' => 'M',
                 'LIB_VIL_NAI_ETU' => 'الرباط'
             ]),
-            'status' => 'approved',
+            'status' => 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم',
             'admin_notes' => 'تم الموافقة على الطلب. يمكن استلام الديبلوم من الإدارة.'
         ]
     ];
@@ -280,8 +281,10 @@ function updateRequestStatus($pdo) {
     $requestId = $data['request_id'] ?? '';
     $status = $data['status'] ?? '';
     
-    if (!in_array($status, ['pending', 'approved', 'rejected'])) {
-        echo json_encode(['success' => false, 'message' => 'Invalid status']);
+    $validStatuses = ['قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض'];
+    
+    if (!in_array($status, $validStatuses)) {
+        echo json_encode(['success' => false, 'message' => 'حالة غير صحيحة']);
         return;
     }
     
@@ -293,19 +296,19 @@ function updateRequestStatus($pdo) {
         if ($stmt->rowCount() > 0) {
             echo json_encode([
                 'success' => true, 
-                'message' => 'Status updated successfully'
+                'message' => 'تم تحديث حالة الطلب بنجاح'
             ]);
         } else {
             echo json_encode([
                 'success' => false, 
-                'message' => 'Request not found'
+                'message' => 'لم يتم العثور على الطلب'
             ]);
         }
         
     } catch(PDOException $e) {
         echo json_encode([
             'success' => false, 
-            'message' => 'Database error: ' . $e->getMessage()
+            'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage()
         ]);
     }
 }
@@ -323,19 +326,19 @@ function saveAdminNotes($pdo) {
         if ($stmt->rowCount() > 0) {
             echo json_encode([
                 'success' => true, 
-                'message' => 'Notes saved successfully'
+                'message' => 'تم حفظ الملاحظات بنجاح'
             ]);
         } else {
             echo json_encode([
                 'success' => false, 
-                'message' => 'Request not found'
+                'message' => 'لم يتم العثور على الطلب'
             ]);
         }
         
     } catch(PDOException $e) {
         echo json_encode([
             'success' => false, 
-            'message' => 'Database error: ' . $e->getMessage()
+            'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage()
         ]);
     }
 }
@@ -348,15 +351,15 @@ function getStatistics($pdo) {
             request_number VARCHAR(20) UNIQUE NOT NULL,
             cod_etu VARCHAR(20) NOT NULL,
             student_data TEXT,
-            status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            status ENUM('قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'قيد المعالجة',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         
         $query = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+                    SUM(CASE WHEN status = 'قيد المعالجة' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' THEN 1 ELSE 0 END) as approved,
+                    SUM(CASE WHEN status = 'طلب مرفوض' THEN 1 ELSE 0 END) as rejected
                   FROM diploma_requests";
         
         $stmt = $pdo->prepare($query);
@@ -372,7 +375,7 @@ function getStatistics($pdo) {
     } catch(PDOException $e) {
         echo json_encode([
             'success' => false, 
-            'message' => 'Database error: ' . $e->getMessage()
+            'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage()
         ]);
     }
 }

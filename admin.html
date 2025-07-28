@@ -224,20 +224,22 @@
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: bold;
-            text-transform: uppercase;
+            display: inline-block;
+            min-width: 120px;
+            text-align: center;
         }
 
-        .status-pending {
+        .status-قيد-المعالجة {
             background: #fff3cd;
             color: #856404;
         }
 
-        .status-approved {
+        .status-طلب-معالج-يرجى-الالتحاق-بالمصلحة-لسحب-الديبلوم {
             background: #d4edda;
             color: #155724;
         }
 
-        .status-rejected {
+        .status-طلب-مرفوض {
             background: #f8d7da;
             color: #721c24;
         }
@@ -245,6 +247,7 @@
         .actions {
             display: flex;
             gap: 5px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -263,6 +266,11 @@
 
         .btn-view {
             background: #3498db;
+            color: white;
+        }
+
+        .btn-process {
+            background: #f39c12;
             color: white;
         }
 
@@ -381,6 +389,14 @@
             font-family: inherit;
         }
 
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
         @media (max-width: 768px) {
             .stats {
                 grid-template-columns: 1fr;
@@ -408,6 +424,10 @@
                 display: block;
                 text-align: center;
                 margin: 5px 0;
+            }
+
+            .status-buttons {
+                flex-direction: column;
             }
         }
     </style>
@@ -461,11 +481,11 @@
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-number stat-pending" id="pending-count">-</div>
-                    <div>طلبات معلقة</div>
+                    <div>قيد المعالجة</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number stat-approved" id="approved-count">-</div>
-                    <div>طلبات موافق عليها</div>
+                    <div>معالج - جاهز للاستلام</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number stat-rejected" id="rejected-count">-</div>
@@ -484,9 +504,9 @@
                     <div class="filter-controls">
                         <select id="status-filter" onchange="filterRequests()">
                             <option value="">جميع الحالات</option>
-                            <option value="pending">معلق</option>
-                            <option value="approved">موافق عليه</option>
-                            <option value="rejected">مرفوض</option>
+                            <option value="قيد المعالجة">قيد المعالجة</option>
+                            <option value="طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم">معالج - جاهز للاستلام</option>
+                            <option value="طلب مرفوض">مرفوض</option>
                         </select>
                         <button class="btn btn-view" onclick="refreshData()">تحديث</button>
                     </div>
@@ -670,9 +690,9 @@
         }
 
         function updateStatistics() {
-            const pending = allRequests.filter(req => req.status === 'pending').length;
-            const approved = allRequests.filter(req => req.status === 'approved').length;
-            const rejected = allRequests.filter(req => req.status === 'rejected').length;
+            const pending = allRequests.filter(req => req.status === 'قيد المعالجة').length;
+            const approved = allRequests.filter(req => req.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم').length;
+            const rejected = allRequests.filter(req => req.status === 'طلب مرفوض').length;
             const total = allRequests.length;
 
             document.getElementById('pending-count').textContent = pending;
@@ -701,7 +721,7 @@
                         <td>${request.cod_etu}</td>
                         <td>${createdDate}</td>
                         <td>
-                            <span class="status-badge status-${request.status}">
+                            <span class="status-badge ${getStatusClass(request.status)}">
                                 ${getStatusText(request.status)}
                             </span>
                         </td>
@@ -710,14 +730,7 @@
                                 <button class="btn btn-view" onclick="viewRequest(${request.id})">
                                     عرض
                                 </button>
-                                ${request.status === 'pending' ? `
-                                    <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'approved')">
-                                        موافقة
-                                    </button>
-                                    <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'rejected')">
-                                        رفض
-                                    </button>
-                                ` : ''}
+                                ${getStatusButtons(request)}
                             </div>
                         </td>
                     </tr>
@@ -727,13 +740,49 @@
             document.getElementById('no-requests').style.display = 'none';
         }
 
+        function getStatusClass(status) {
+            return 'status-' + status.replace(/\s+/g, '-');
+        }
+
         function getStatusText(status) {
             const statusMap = {
-                'pending': 'معلق',
-                'approved': 'موافق عليه',
-                'rejected': 'مرفوض'
+                'قيد المعالجة': 'قيد المعالجة',
+                'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - جاهز للاستلام',
+                'طلب مرفوض': 'طلب مرفوض'
             };
             return statusMap[status] || status;
+        }
+
+        function getStatusButtons(request) {
+            if (request.status === 'قيد المعالجة') {
+                return `
+                    <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم')">
+                        معالج
+                    </button>
+                    <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'طلب مرفوض')">
+                        رفض
+                    </button>
+                `;
+            } else if (request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم') {
+                return `
+                    <button class="btn btn-process" onclick="updateStatus(${request.id}, 'قيد المعالجة')">
+                        قيد المعالجة
+                    </button>
+                    <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'طلب مرفوض')">
+                        رفض
+                    </button>
+                `;
+            } else if (request.status === 'طلب مرفوض') {
+                return `
+                    <button class="btn btn-process" onclick="updateStatus(${request.id}, 'قيد المعالجة')">
+                        قيد المعالجة
+                    </button>
+                    <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم')">
+                        معالج
+                    </button>
+                `;
+            }
+            return '';
         }
 
         function filterRequests() {
@@ -767,6 +816,7 @@
                     <p><strong>تاريخ الميلاد:</strong> ${studentData.DATE_NAI_IND || 'غير محدد'}</p>
                     <p><strong>الجنس:</strong> ${studentData.COD_SEX_ETU === 'M' ? 'ذكر' : studentData.COD_SEX_ETU === 'F' ? 'أنثى' : 'غير محدد'}</p>
                     <p><strong>مدينة الميلاد:</strong> ${studentData.LIB_VIL_NAI_ETU || 'غير محدد'}</p>
+                    <p><strong>الحالة الحالية:</strong> <span class="status-badge ${getStatusClass(request.status)}">${getStatusText(request.status)}</span></p>
                 </div>
 
                 <h3>المستندات المرفقة</h3>
@@ -802,16 +852,17 @@
                     </button>
                 </div>
 
-                ${request.status === 'pending' ? `
-                    <div style="margin-top: 20px; text-align: center;">
-                        <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'approved'); closeModal();">
-                            موافقة على الطلب
-                        </button>
-                        <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'rejected'); closeModal();" style="margin-right: 10px;">
-                            رفض الطلب
-                        </button>
-                    </div>
-                ` : ''}
+                <div class="status-buttons">
+                    <button class="btn btn-process" onclick="updateStatus(${request.id}, 'قيد المعالجة'); closeModal();">
+                        قيد المعالجة
+                    </button>
+                    <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم'); closeModal();">
+                        معالج - جاهز للاستلام
+                    </button>
+                    <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'طلب مرفوض'); closeModal();">
+                        رفض الطلب
+                    </button>
+                </div>
             `;
 
             document.getElementById('request-modal').style.display = 'block';
@@ -842,7 +893,7 @@
                     updateStatistics();
                     filterRequests(); // Refresh display
                     
-                    alert(`تم ${newStatus === 'approved' ? 'قبول' : 'رفض'} الطلب بنجاح`);
+                    alert(`تم تحديث حالة الطلب إلى: ${getStatusText(newStatus)}`);
                 } else {
                     alert('خطأ في تحديث حالة الطلب: ' + result.message);
                 }

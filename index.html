@@ -264,6 +264,26 @@
             margin-top: 20px;
         }
 
+        .info-message {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .warning-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
         .status-card {
             background: #f8f9fa;
             border-radius: 10px;
@@ -281,6 +301,20 @@
 
         .status-rejected {
             border-left: 5px solid #e74c3c;
+        }
+
+        .existing-request-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .existing-request-notice h3 {
+            margin-bottom: 15px;
+            color: #856404;
         }
 
         @media (max-width: 768px) {
@@ -366,6 +400,18 @@
 
                     <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
                 </div>
+            </div>
+
+            <!-- Existing Request Notice -->
+            <div id="existing-request-step" class="step-container">
+                <div class="existing-request-notice">
+                    <h3>لديك طلب موجود بالفعل</h3>
+                    <p>لا يمكنك تقديم طلب جديد لأن لديك طلب موجود بالفعل في النظام.</p>
+                    <div id="existing-request-details">
+                        <!-- Request details will be shown here -->
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
             </div>
 
             <!-- Main Steps -->
@@ -560,15 +606,15 @@
         function displayRequestStatus(requests) {
             const resultDiv = document.getElementById('status-result');
             const statusMap = {
-                'pending': 'معلق',
-                'approved': 'موافق عليه',
-                'rejected': 'مرفوض'
+                'قيد المعالجة': 'قيد المعالجة',
+                'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - يرجى الالتحاق بالمصلحة لسحب الديبلوم',
+                'طلب مرفوض': 'طلب مرفوض'
             };
 
             const statusClassMap = {
-                'pending': 'status-pending',
-                'approved': 'status-approved',
-                'rejected': 'status-rejected'
+                'قيد المعالجة': 'status-pending',
+                'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'status-approved',
+                'طلب مرفوض': 'status-rejected'
             };
 
             resultDiv.innerHTML = requests.map(request => {
@@ -583,13 +629,48 @@
                         <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
                         <p><strong>الحالة:</strong> ${statusMap[request.status]}</p>
                         ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
-                        ${request.status === 'approved' ? '<p style="color: #27ae60; font-weight: bold;">✅ يمكنك الآن استلام الديبلوم من الإدارة</p>' : ''}
-                        ${request.status === 'rejected' ? '<p style="color: #e74c3c; font-weight: bold;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
+                        ${request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' ? '<p style="color: #27ae60; font-weight: bold;">✅ يمكنك الآن استلام الديبلوم من الإدارة</p>' : ''}
+                        ${request.status === 'طلب مرفوض' ? '<p style="color: #e74c3c; font-weight: bold;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
+                        ${request.status === 'قيد المعالجة' ? '<p style="color: #f39c12; font-weight: bold;">⏳ طلبك قيد المراجعة</p>' : ''}
                     </div>
                 `;
             }).join('');
             
             resultDiv.style.display = 'block';
+        }
+
+        function showExistingRequest(request) {
+            const statusMap = {
+                'قيد المعالجة': 'قيد المعالجة',
+                'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - يرجى الالتحاق بالمصلحة لسحب الديبلوم',
+                'طلب مرفوض': 'طلب مرفوض'
+            };
+
+            const statusClassMap = {
+                'قيد المعالجة': 'status-pending',
+                'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'status-approved',
+                'طلب مرفوض': 'status-rejected'
+            };
+
+            const studentData = JSON.parse(request.student_data || '{}');
+            const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
+            const createdDate = new Date(request.created_at).toLocaleDateString('ar-SA');
+
+            document.getElementById('existing-request-details').innerHTML = `
+                <div class="status-card ${statusClassMap[request.status]}" style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">تفاصيل طلبك الحالي:</h4>
+                    <p><strong>رقم الطلب:</strong> ${request.request_number}</p>
+                    <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
+                    <p><strong>الحالة:</strong> ${statusMap[request.status]}</p>
+                    ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
+                    ${request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' ? '<p style="color: #27ae60; font-weight: bold; margin-top: 15px;">✅ يمكنك استلام الديبلوم من الإدارة الآن!</p>' : ''}
+                    ${request.status === 'طلب مرفوض' ? '<p style="color: #e74c3c; font-weight: bold; margin-top: 15px;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
+                    ${request.status === 'قيد المعالجة' ? '<p style="color: #f39c12; font-weight: bold; margin-top: 15px;">⏳ طلبك قيد المراجعة من قبل الإدارة</p>' : ''}
+                </div>
+            `;
+
+            document.getElementById('login-step').classList.remove('active');
+            document.getElementById('existing-request-step').classList.add('active');
         }
 
         async function login() {
@@ -626,10 +707,14 @@
                     currentStudent = result.student;
                     errorDiv.style.display = 'none';
                     
-                    document.getElementById('login-step').classList.remove('active');
-                    document.getElementById('main-steps').classList.add('active');
-                    
-                    populateStudentData();
+                    // Check if student already has a request
+                    if (result.existing_request) {
+                        showExistingRequest(result.existing_request);
+                    } else {
+                        document.getElementById('login-step').classList.remove('active');
+                        document.getElementById('main-steps').classList.add('active');
+                        populateStudentData();
+                    }
                 } else {
                     errorDiv.textContent = result.message;
                     errorDiv.style.display = 'block';

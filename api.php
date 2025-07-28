@@ -1,5 +1,5 @@
 <?php
-// api.php - Updated with file upload and status check functionality
+// api.php - Updated with duplicate request prevention
 
 // CORS Headers
 header('Access-Control-Allow-Origin: *');
@@ -87,6 +87,10 @@ try {
             handleCheckStatus($pdo);
             break;
 
+        case 'check_existing_request':
+            handleCheckExistingRequest($pdo);
+            break;
+
         default:
             sendJsonResponse([
                 'success' => false,
@@ -111,13 +115,14 @@ function createDiplomaRequestsTable($pdo) {
         national_id_file VARCHAR(255),
         success_cert_file VARCHAR(255),
         bac_cert_file VARCHAR(255),
-        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        status ENUM('قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'قيد المعالجة',
         admin_notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_cod_etu (cod_etu),
         INDEX idx_status (status),
-        INDEX idx_request_number (request_number)
+        INDEX idx_request_number (request_number),
+        UNIQUE KEY unique_student_request (cod_etu)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     
     $pdo->exec($createTable);
@@ -161,12 +166,18 @@ function handleLogin($pdo) {
         $storedDate = convertTextDateToStandard($student['DATE_NAI_IND']);
         
         if ($storedDate === $date_nai) {
+            // Check if student already has a request
+            $checkStmt = $pdo->prepare("SELECT * FROM diploma_requests WHERE cod_etu = ? LIMIT 1");
+            $checkStmt->execute([$cod_etu]);
+            $existingRequest = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
             // Prepare student data for frontend
             $student['DATE_NAI_IND'] = $storedDate;
             
             sendJsonResponse([
                 'success' => true,
                 'student' => $student,
+                'existing_request' => $existingRequest,
                 'message' => 'تم تسجيل الدخول بنجاح'
             ]);
         } else {
@@ -180,6 +191,38 @@ function handleLogin($pdo) {
         sendJsonResponse([
             'success' => false,
             'message' => 'خطأ في تسجيل الدخول: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+function handleCheckExistingRequest($pdo) {
+    try {
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+
+        $codEtu = trim($data['cod_etu'] ?? '');
+
+        if (empty($codEtu)) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'رمز الطالب مطلوب'
+            ]);
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM diploma_requests WHERE cod_etu = ? LIMIT 1");
+        $stmt->execute([$codEtu]);
+        $existingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        sendJsonResponse([
+            'success' => true,
+            'has_request' => !empty($existingRequest),
+            'request' => $existingRequest
+        ]);
+
+    } catch (Exception $e) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في التحقق من الطلب: ' . $e->getMessage()
         ], 500);
     }
 }
@@ -248,6 +291,17 @@ function handleSubmitRequest($pdo) {
             ]);
         }
 
+        // Check if student already has a request
+        $checkStmt = $pdo->prepare("SELECT id FROM diploma_requests WHERE cod_etu = ?");
+        $checkStmt->execute([$codEtu]);
+        
+        if ($checkStmt->fetch()) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'لديك طلب موجود بالفعل. لا يمكنك تقديم طلب آخر.'
+            ]);
+        }
+
         // Generate unique request number
         $requestNumber = 'REQ-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         
@@ -310,7 +364,7 @@ function handleSubmitRequest($pdo) {
         // Insert request into database
         $query = "INSERT INTO diploma_requests 
                   (request_number, cod_etu, student_data, national_id_file, success_cert_file, bac_cert_file, status) 
-                  VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+                  VALUES (?, ?, ?, ?, ?, ?, 'قيد المعالجة')";
         
         $stmt = $pdo->prepare($query);
         $stmt->execute([
@@ -329,6 +383,14 @@ function handleSubmitRequest($pdo) {
         ]);
 
     } catch (Exception $e) {
+        // Check if it's a duplicate entry error
+        if ($e->getCode() == 23000 && strpos($e->getMessage(), 'unique_student_request') !== false) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'لديك طلب موجود بالفعل. لا يمكنك تقديم طلب آخر.'
+            ]);
+        }
+        
         sendJsonResponse([
             'success' => false,
             'message' => 'خطأ في إرسال الطلب: ' . $e->getMessage()
