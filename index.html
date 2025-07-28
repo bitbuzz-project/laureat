@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام طلب سحب الديبلوم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .login-form {
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            text-align: right;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: transform 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .step-container {
+            display: none;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        .steps-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+
+        .step-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .step-indicator.active {
+            background: #3498db;
+        }
+
+        .step-indicator.completed {
+            background: #27ae60;
+        }
+
+        .student-data {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 150px;
+        }
+
+        .data-value {
+            flex: 1;
+            padding: 8px 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            text-align: right;
+        }
+
+        .data-value:hover {
+            border-color: #3498db;
+        }
+
+        .data-value.editing {
+            border-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #3498db;
+        }
+
+        .file-upload.dragover {
+            border-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #bdc3c7;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .uploaded-file {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .uploaded-file.show {
+            display: flex;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>نظام طلب سحب الديبلوم</h1>
+            <p>Diploma Request System</p>
+        </div>
+
+        <div class="content">
+            <!-- Login Step -->
+            <div id="login-step" class="step-container active">
+                <div class="login-form">
+                    <h2 style="margin-bottom: 30px; color: #2c3e50;">تسجيل الدخول</h2>
+                    
+                    <div class="form-group">
+                        <label for="student-code">رمز الطالب (COD_ETU)</label>
+                        <input type="text" id="student-code" placeholder="أدخل رمز الطالب">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birth-date">تاريخ الميلاد (DATE_NAI_IND)</label>
+                        <input type="date" id="birth-date">
+                    </div>
+
+                    <button class="btn" onclick="login()">دخول</button>
+                    
+                    <div id="login-error" class="error-message" style="display: none;">
+                        رمز الطالب أو تاريخ الميلاد غير صحيح
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Steps -->
+            <div id="main-steps" class="step-container">
+                <div class="steps-nav">
+                    <div class="step-indicator active" id="step1-indicator">1</div>
+                    <div class="step-indicator" id="step2-indicator">2</div>
+                    <div class="step-indicator" id="step3-indicator">3</div>
+                </div>
+
+                <!-- Step 1: Verify Data -->
+                <div id="step1" class="step-content active">
+                    <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الأولى: التحقق من البيانات</h2>
+                    <p style="margin-bottom: 20px; color: #7f8c8d;">يرجى التحقق من بياناتك الشخصية. إذا كانت هناك معلومة خاطئة، اضغط عليها لتعديلها</p>
+                    
+                    <div class="student-data" id="student-data">
+                        <!-- Data will be populated here -->
+                    </div>
+
+                    <div class="nav-buttons">
+                        <button class="btn" onclick="nextStep()">التالي</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Upload Documents -->
+                <div id="step2" class="step-content" style="display: none;">
+                    <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الثانية: رفع المستندات المطلوبة</h2>
+                    
+                    <div class="form-group">
+                        <label>صورة البطاقة الوطنية</label>
+                        <div class="file-upload" onclick="document.getElementById('national-id').click()">
+                            <div class="upload-icon">📄</div>
+                            <div class="upload-text">اضغط لرفع صورة البطاقة الوطنية</div>
+                            <input type="file" id="national-id" accept="image/*" onchange="handleFileUpload(this, 'national-id-uploaded')">
+                        </div>
+                        <div class="uploaded-file" id="national-id-uploaded">
+                            <span></span>
+                            <button onclick="removeFile('national-id', 'national-id-uploaded')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px;">حذف</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>شهادة النجاح</label>
+                        <div class="file-upload" onclick="document.getElementById('success-cert').click()">
+                            <div class="upload-icon">🎓</div>
+                            <div class="upload-text">اضغط لرفع شهادة النجاح</div>
+                            <input type="file" id="success-cert" accept="image/*" onchange="handleFileUpload(this, 'success-cert-uploaded')">
+                        </div>
+                        <div class="uploaded-file" id="success-cert-uploaded">
+                            <span></span>
+                            <button onclick="removeFile('success-cert', 'success-cert-uploaded')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px;">حذف</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>شهادة البكالوريا</label>
+                        <div class="file-upload" onclick="document.getElementById('bac-cert').click()">
+                            <div class="upload-icon">📜</div>
+                            <div class="upload-text">اضغط لرفع شهادة البكالوريا</div>
+                            <input type="file" id="bac-cert" accept="image/*" onchange="handleFileUpload(this, 'bac-cert-uploaded')">
+                        </div>
+                        <div class="uploaded-file" id="bac-cert-uploaded">
+                            <span></span>
+                            <button onclick="removeFile('bac-cert', 'bac-cert-uploaded')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px;">حذف</button>
+                        </div>
+                    </div>
+
+                    <div class="nav-buttons">
+                        <button class="btn btn-secondary" onclick="prevStep()">السابق</button>
+                        <button class="btn" onclick="nextStep()" id="step2-next" disabled>التالي</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Confirmation -->
+                <div id="step3" class="step-content" style="display: none;">
+                    <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الثالثة: تأكيد الطلب</h2>
+                    
+                    <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">ملخص الطلب</h3>
+                        <p style="margin-bottom: 10px;"><strong>الاسم:</strong> <span id="summary-name"></span></p>
+                        <p style="margin-bottom: 10px;"><strong>رمز الطالب:</strong> <span id="summary-code"></span></p>
+                        <p style="margin-bottom: 10px;"><strong>البطاقة الوطنية:</strong> <span id="summary-cin"></span></p>
+                        <p style="margin-bottom: 10px;"><strong>المستندات المرفقة:</strong></p>
+                        <ul id="summary-documents" style="margin-right: 20px; margin-top: 10px;">
+                        </ul>
+                    </div>
+
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+                        <p style="color: #856404; margin-bottom: 10px;"><strong>تنبيه مهم:</strong></p>
+                        <p style="color: #856404;">بعد إرسال الطلب، ستتم مراجعته من قبل الإدارة وسيتم التواصل معك في حالة الموافقة أو الحاجة لمستندات إضافية.</p>
+                    </div>
+
+                    <div class="nav-buttons">
+                        <button class="btn btn-secondary" onclick="prevStep()">السابق</button>
+                        <button class="btn btn-success" onclick="submitRequest()">إرسال الطلب</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div id="success-step" class="step-container">
+                <div class="success-message">
+                    <h2 style="color: #155724; margin-bottom: 15px;">✅ تم إرسال الطلب بنجاح</h2>
+                    <p>تم إرسال طلب سحب الديبلوم بنجاح. سيتم مراجعة طلبك والتواصل معك قريباً.</p>
+                    <p style="margin-top: 15px;"><strong>رقم الطلب:</strong> <span id="request-number"></span></p>
+                    <button class="btn" onclick="location.reload()" style="margin-top: 20px;">طلب جديد</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Update this URL to match your server
+        const API_URL = 'api.php'; // تأكد أن هذا المسار صحيح
+        
+        // للتشخيص، جرب هذا أولاً:
+        // const API_URL = 'debug_connection.php';
+        
+        let currentStudent = null;
+        let currentStep = 1;
+        let uploadedFiles = {};
+        let updatedFields = {};
+
+        async function login() {
+            const studentCode = document.getElementById('student-code').value;
+            const birthDate = document.getElementById('birth-date').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!studentCode || !birthDate) {
+                errorDiv.textContent = 'يرجى إدخال جميع البيانات المطلوبة';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                // Show loading
+                const loginBtn = event.target;
+                const originalText = loginBtn.textContent;
+                loginBtn.textContent = 'جاري التحقق...';
+                loginBtn.disabled = true;
+
+                const response = await fetch(`${API_URL}?action=login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        cod_etu: studentCode,
+                        date_nai: birthDate
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentStudent = result.student;
+                    errorDiv.style.display = 'none';
+                    
+                    // Show main steps
+                    document.getElementById('login-step').classList.remove('active');
+                    document.getElementById('main-steps').classList.add('active');
+                    
+                    populateStudentData();
+                } else {
+                    errorDiv.textContent = result.message;
+                    errorDiv.style.display = 'block';
+                }
+
+                // Reset button
+                loginBtn.textContent = originalText;
+                loginBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Login error details:', error);
+                
+                // معلومات أكثر تفصيلاً للتشخيص
+                let errorMessage = 'خطأ في الاتصال بالخادم';
+                
+                if (error.name === 'TypeError') {
+                    errorMessage = 'تحقق من وجود ملف api.php';
+                } else if (error.message.includes('NetworkError')) {
+                    errorMessage = 'مشكلة في الشبكة - تحقق من الاتصال';
+                } else if (error.message.includes('404')) {
+                    errorMessage = 'ملف API غير موجود - تحقق من المسار';
+                }
+                
+                errorDiv.textContent = errorMessage + ': ' + error.message;
+                errorDiv.style.display = 'block';
+                
+                // Reset button
+                const loginBtn = document.querySelector('.btn');
+                loginBtn.textContent = 'دخول';
+                loginBtn.disabled = false;
+            }
+        }
+
+        function populateStudentData() {
+            const dataContainer = document.getElementById('student-data');
+            const fields = [
+                { key: 'LIB_NOM_IND_ARB', label: 'الاسم العائلي (عربي)', editable: true },
+                { key: 'LIB_PRN_IND_ARB', label: 'الاسم الشخصي (عربي)', editable: true },
+                { key: 'LIB_NOM_PAT_IND', label: 'الاسم العائلي (لاتيني)', editable: true },
+                { key: 'LIB_PR1_IND', label: 'الاسم الشخصي (لاتيني)', editable: true },
+                { key: 'COD_ETU', label: 'رمز الطالب', editable: false },
+                { key: 'CIN_IND', label: 'رقم البطاقة الوطنية', editable: true },
+                { key: 'DATE_NAI_IND', label: 'تاريخ الميلاد', editable: false },
+                { key: 'COD_SEX_ETU', label: 'الجنس', editable: false },
+                { key: 'LIB_VIL_NAI_ETU', label: 'مدينة الميلاد', editable: true }
+            ];
+
+            dataContainer.innerHTML = fields.map(field => `
+                <div class="data-row">
+                    <div class="data-label">${field.label}:</div>
+                    <div class="data-value ${field.editable ? 'editable' : ''}" 
+                         data-field="${field.key}" 
+                         ${field.editable ? 'onclick="editField(this)"' : ''}>
+                        ${currentStudent[field.key]}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editField(element) {
+            if (element.classList.contains('editing')) return;
+            
+            const currentValue = element.textContent;
+            element.classList.add('editing');
+            element.innerHTML = `<input type="text" value="${currentValue}" onblur="saveField(this)" onkeypress="handleEnter(event, this)" style="width: 100%; border: none; background: transparent; text-align: right;">`;
+            element.querySelector('input').focus();
+        }
+
+        function saveField(input) {
+            const container = input.parentElement;
+            const field = container.dataset.field;
+            const newValue = input.value;
+            
+            // Track updated fields
+            updatedFields[field] = newValue;
+            currentStudent[field] = newValue;
+            
+            container.classList.remove('editing');
+            container.textContent = newValue;
+            
+            // Save to database immediately
+            saveUpdatedFields();
+        }
+
+        async function saveUpdatedFields() {
+            if (Object.keys(updatedFields).length === 0) return;
+            
+            try {
+                const response = await fetch(`${API_URL}?action=update_student`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        cod_etu: currentStudent.COD_ETU,
+                        updates: updatedFields
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    console.log('Data updated successfully');
+                    updatedFields = {}; // Clear updated fields
+                } else {
+                    console.error('Failed to update data:', result.message);
+                }
+            } catch (error) {
+                console.error('Error updating data:', error);
+            }
+        }
+
+        function handleEnter(event, input) {
+            if (event.key === 'Enter') {
+                saveField(input);
+            }
+        }
+
+        function handleFileUpload(input, uploadedId) {
+            const file = input.files[0];
+            if (file) {
+                const uploadedDiv = document.getElementById(uploadedId);
+                uploadedDiv.querySelector('span').textContent = file.name;
+                uploadedDiv.classList.add('show');
+                uploadedFiles[input.id] = file;
+                checkStep2Completion();
+            }
+        }
+
+        function removeFile(inputId, uploadedId) {
+            document.getElementById(inputId).value = '';
+            document.getElementById(uploadedId).classList.remove('show');
+            delete uploadedFiles[inputId];
+            checkStep2Completion();
+        }
+
+        function checkStep2Completion() {
+            const requiredFiles = ['national-id', 'success-cert', 'bac-cert'];
+            const allUploaded = requiredFiles.every(id => uploadedFiles[id]);
+            document.getElementById('step2-next').disabled = !allUploaded;
+        }
+
+        function nextStep() {
+            if (currentStep === 1) {
+                // Move to step 2
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('step1-indicator').classList.add('completed');
+                document.getElementById('step1-indicator').classList.remove('active');
+                document.getElementById('step2-indicator').classList.add('active');
+                currentStep = 2;
+            } else if (currentStep === 2) {
+                // Move to step 3
+                document.getElementById('step2').style.display = 'none';
+                document.getElementById('step3').style.display = 'block';
+                document.getElementById('step2-indicator').classList.add('completed');
+                document.getElementById('step2-indicator').classList.remove('active');
+                document.getElementById('step3-indicator').classList.add('active');
+                populateSummary();
+                currentStep = 3;
+            }
+        }
+
+        function prevStep() {
+            if (currentStep === 2) {
+                document.getElementById('step2').style.display = 'none';
+                document.getElementById('step1').style.display = 'block';
+                document.getElementById('step2-indicator').classList.remove('active');
+                document.getElementById('step1-indicator').classList.add('active');
+                document.getElementById('step1-indicator').classList.remove('completed');
+                currentStep = 1;
+            } else if (currentStep === 3) {
+                document.getElementById('step3').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('step3-indicator').classList.remove('active');
+                document.getElementById('step2-indicator').classList.add('active');
+                document.getElementById('step2-indicator').classList.remove('completed');
+                currentStep = 2;
+            }
+        }
+
+        function populateSummary() {
+            document.getElementById('summary-name').textContent = 
+                `${currentStudent.LIB_PRN_IND_ARB} ${currentStudent.LIB_NOM_IND_ARB}`;
+            document.getElementById('summary-code').textContent = currentStudent.COD_ETU;
+            document.getElementById('summary-cin').textContent = currentStudent.CIN_IND;
+            
+            const documentsList = document.getElementById('summary-documents');
+            const documents = [
+                { id: 'national-id', name: 'صورة البطاقة الوطنية' },
+                { id: 'success-cert', name: 'شهادة النجاح' },
+                { id: 'bac-cert', name: 'شهادة البكالوريا' }
+            ];
+            
+            documentsList.innerHTML = documents.map(doc => 
+                uploadedFiles[doc.id] ? `<li>${doc.name} ✅</li>` : ''
+            ).join('');
+        }
+
+        async function submitRequest() {
+            try {
+                // Show loading
+                const submitBtn = event.target;
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'جاري الإرسال...';
+                submitBtn.disabled = true;
+
+                // Prepare form data for file upload
+                const formData = new FormData();
+                formData.append('cod_etu', currentStudent.COD_ETU);
+                formData.append('request_data', JSON.stringify(currentStudent));
+
+                // Append files
+                const fileInputs = ['national-id', 'success-cert', 'bac-cert'];
+                fileInputs.forEach(inputId => {
+                    const input = document.getElementById(inputId);
+                    if (input.files[0]) {
+                        // Map input IDs to expected names
+                        const fileMap = {
+                            'national-id': 'national_id',
+                            'success-cert': 'success_cert',
+                            'bac-cert': 'bac_cert'
+                        };
+                        formData.append(fileMap[inputId], input.files[0]);
+                    }
+                });
+
+                const response = await fetch(`${API_URL}?action=submit_request`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Hide main steps
+                    document.getElementById('main-steps').classList.remove('active');
+                    
+                    // Show success message
+                    document.getElementById('success-step').classList.add('active');
+                    document.getElementById('request-number').textContent = result.request_number;
+                } else {
+                    alert('خطأ في إرسال الطلب: ' + result.message);
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+
+            } catch (error) {
+                console.error('Submit error:', error);
+                alert('خطأ في الاتصال بالخادم');
+                
+                // Reset button
+                const submitBtn = document.querySelector('.btn-success');
+                submitBtn.textContent = 'إرسال الطلب';
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Add drag and drop functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileUploads = document.querySelectorAll('.file-upload');
+            
+            fileUploads.forEach(upload => {
+                upload.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('dragover');
+                });
+                
+                upload.addEventListener('dragleave', function(e) {
+                    this.classList.remove('dragover');
+                });
+                
+                upload.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('dragover');
+                    
+                    const input = this.querySelector('input[type="file"]');
+                    const files = e.dataTransfer.files;
+                    
+                    if (files.length > 0) {
+                        input.files = files;
+                        const event = new Event('change', { bubbles: true });
+                        input.dispatchEvent(event);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
