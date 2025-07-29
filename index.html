@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام طلب سحب الديبلوم</title>
+    <title>كلية العلوم القانونية والسياسية - سطات</title>
     <style>
         * {
             margin: 0;
@@ -38,11 +38,6 @@
             font-size: 2.2rem;
             margin-bottom: 10px;
             font-weight: bold;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
         }
 
         .content {
@@ -104,6 +99,14 @@
             padding: 10px 20px;
             font-size: 1rem;
             margin: 5px;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
         }
 
         .step-container {
@@ -193,15 +196,11 @@
             text-align: center;
             margin-bottom: 20px;
             transition: border-color 0.3s;
+            cursor: pointer;
         }
 
         .file-upload:hover {
             border-color: #3498db;
-        }
-
-        .file-upload.dragover {
-            border-color: #27ae60;
-            background: #f0fff4;
         }
 
         .file-upload input[type="file"] {
@@ -217,6 +216,12 @@
         .upload-text {
             color: #7f8c8d;
             font-size: 1.1rem;
+        }
+
+        .file-size-hint {
+            color: #95a5a6;
+            font-size: 0.9rem;
+            margin-top: 5px;
         }
 
         .uploaded-file {
@@ -240,14 +245,6 @@
             margin-top: 30px;
         }
 
-        .btn-secondary {
-            background: #95a5a6;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-        }
-
         .error-message {
             color: #e74c3c;
             text-align: center;
@@ -258,26 +255,6 @@
         .success-message {
             background: #d4edda;
             color: #155724;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .info-message {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .warning-message {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
@@ -343,18 +320,20 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1> مصلحة الدبلومات</h1>
-          
+            <h1>مصلحة الدبلومات</h1>
+            <span>خاص بخريجي السنة الجامعية 2024-2025</span>
+             <h5>Licence Fondamentale</h5>
         </div>
 
         <div class="content">
             <!-- Initial Choice -->
             <div id="initial-choice" class="step-container active">
-                <h2 style="margin-bottom: 30px; color: #2c3e50; text-align: center;">اختر الخدمة</h2>
                 <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-small" onclick="showNewRequest()">طلب جديد</button>
                     <button class="btn btn-small" onclick="showStatusCheck()">تتبع طلب موجود</button>
                 </div>
+   
+
             </div>
 
             <!-- Status Check -->
@@ -369,9 +348,7 @@
 
                     <button class="btn" onclick="checkRequestStatus()">تحقق من حالة الطلب</button>
                     
-                    <div id="status-result" style="display: none;">
-                        <!-- Status result will be shown here -->
-                    </div>
+                    <div id="status-result" style="display: none;"></div>
                     
                     <div id="status-error" class="error-message" style="display: none;">
                         لم يتم العثور على طلب لهذا الرمز
@@ -387,7 +364,7 @@
                     <h2 style="margin-bottom: 30px; color: #2c3e50;">تسجيل الدخول</h2>
                     
                     <div class="form-group">
-                        <label for="status-student-code">رقم الطالب (APOGEE)</label>
+                        <label for="student-code">رقم الطالب (APOGEE)</label>
                         <input type="text" id="student-code" placeholder="أدخل رقم الطالب">
                     </div>
 
@@ -411,9 +388,7 @@
                 <div class="existing-request-notice">
                     <h3>لديك طلب موجود بالفعل</h3>
                     <p>لا يمكنك تقديم طلب جديد لأن لديك طلب موجود بالفعل في النظام.</p>
-                    <div id="existing-request-details">
-                        <!-- Request details will be shown here -->
-                    </div>
+                    <div id="existing-request-details"></div>
                 </div>
                 <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">رجوع</button>
             </div>
@@ -431,9 +406,7 @@
                     <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الأولى: التحقق من البيانات</h2>
                     <p style="margin-bottom: 20px; color: #7f8c8d;">يرجى التحقق من بياناتك الشخصية. إذا كانت هناك معلومة خاطئة، اضغط عليها لتعديلها</p>
                     
-                    <div class="student-data" id="student-data">
-                        <!-- Data will be populated here -->
-                    </div>
+                    <div class="student-data" id="student-data"></div>
 
                     <div class="nav-buttons">
                         <button class="btn" onclick="nextStep()">التالي</button>
@@ -443,12 +416,13 @@
                 <!-- Step 2: Upload Documents -->
                 <div id="step2" class="step-content" style="display: none;">
                     <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الثانية: رفع النسخ المطلوبة</h2>
-                    
+                    <span>يرجى رفع الملفات بصيغة: JPEG أو JPG أو PNG أو PDF فقط.</span>
                     <div class="form-group">
                         <label>صورة البطاقة الوطنية</label>
                         <div class="file-upload" onclick="document.getElementById('national-id').click()">
                             <div class="upload-icon">📄</div>
                             <div class="upload-text">اضغط لرفع صورة البطاقة الوطنية</div>
+                            <div class="file-size-hint">الحد الأقصى: 3 </div>
                             <input type="file" id="national-id" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'national-id-uploaded')">
                         </div>
                         <div class="uploaded-file" id="national-id-uploaded">
@@ -462,6 +436,7 @@
                         <div class="file-upload" onclick="document.getElementById('success-cert').click()">
                             <div class="upload-icon">🎓</div>
                             <div class="upload-text">اضغط لرفع شهادة النجاح</div>
+                            <div class="file-size-hint">الحد الأقصى: 3 MB</div>
                             <input type="file" id="success-cert" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'success-cert-uploaded')">
                         </div>
                         <div class="uploaded-file" id="success-cert-uploaded">
@@ -475,6 +450,7 @@
                         <div class="file-upload" onclick="document.getElementById('bac-cert').click()">
                             <div class="upload-icon">📜</div>
                             <div class="upload-text">اضغط لرفع شهادة البكالوريا</div>
+                            <div class="file-size-hint">الحد الأقصى: 3 MB</div>
                             <input type="file" id="bac-cert" accept="image/*,application/pdf" onchange="handleFileUpload(this, 'bac-cert-uploaded')">
                         </div>
                         <div class="uploaded-file" id="bac-cert-uploaded">
@@ -499,11 +475,8 @@
                         <p style="margin-bottom: 10px;"><strong>رمز الطالب:</strong> <span id="summary-code"></span></p>
                         <p style="margin-bottom: 10px;"><strong>البطاقة الوطنية:</strong> <span id="summary-cin"></span></p>
                         <p style="margin-bottom: 10px;"><strong>المستندات المرفقة:</strong></p>
-                        <ul id="summary-documents" style="margin-right: 20px; margin-top: 10px;">
-                        </ul>
+                        <ul id="summary-documents" style="margin-right: 20px; margin-top: 10px;"></ul>
                     </div>
-
-               
 
                     <div class="nav-buttons">
                         <button class="btn btn-secondary" onclick="prevStep()">السابق</button>
@@ -516,7 +489,7 @@
             <div id="success-step" class="step-container">
                 <div class="success-message">
                     <h2 style="color: #155724; margin-bottom: 15px;">✅ تم إرسال الطلب بنجاح</h2>
-                    <p>تم إرسال الطلب   بنجاح. </p>
+                    <p>تم إرسال الطلب بنجاح.</p>
                     <p style="margin-top: 15px;"><strong>رقم الطلب:</strong> <span id="request-number"></span></p>
                     <button class="btn" onclick="location.reload()" style="margin-top: 20px;">رجوع للصفحة الرئيسية</button>
                 </div>
@@ -525,10 +498,10 @@
     </div>
 
     <script>
-        // Configuration
         const API_URL = 'api.php';
         
         let currentStudent = null;
+        let originalStudent = null;
         let currentStep = 1;
         let uploadedFiles = {};
         let updatedFields = {};
@@ -544,19 +517,15 @@
         }
 
         function goBack() {
-            // Hide all steps
             document.querySelectorAll('.step-container').forEach(step => {
                 step.classList.remove('active');
             });
-            // Show initial choice
             document.getElementById('initial-choice').classList.add('active');
             
-            // Reset forms
             document.getElementById('student-code').value = '';
             document.getElementById('birth-date').value = '';
             document.getElementById('status-student-code').value = '';
             
-            // Hide error messages
             document.getElementById('login-error').style.display = 'none';
             document.getElementById('status-error').style.display = 'none';
             document.getElementById('status-result').style.display = 'none';
@@ -623,7 +592,6 @@
             resultDiv.innerHTML = requests.map(request => {
                 const studentData = JSON.parse(request.student_data || '{}');
                 const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-                // Use Latin date format
                 const createdDate = request.created_at_latin ? 
                     new Date(request.created_at_latin).toLocaleDateString('en-US') : 
                     new Date(request.created_at).toLocaleDateString('en-US');
@@ -662,8 +630,6 @@
             };
 
             const studentData = JSON.parse(request.student_data || '{}');
-            const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-            // Use Latin date format
             const createdDate = request.created_at_latin ? 
                 new Date(request.created_at_latin).toLocaleDateString('en-US') : 
                 new Date(request.created_at).toLocaleDateString('en-US');
@@ -675,10 +641,6 @@
                     <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
                     <p><strong>الحالة:</strong> ${statusMap[request.status] || request.status}</p>
                     ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
-                    ${request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' ? '<p style="color: #27ae60; font-weight: bold; margin-top: 15px;">✅ يمكنك استلام الديبلوم من الإدارة الآن!</p>' : ''}
-                    ${request.status === 'طلب مرفوض' ? '<p style="color: #e74c3c; font-weight: bold; margin-top: 15px;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
-                    ${request.status === 'قيد المعالجة' ? '<p style="color: #f39c12; font-weight: bold; margin-top: 15px;">⏳ طلبك قيد المراجعة من قبل الإدارة</p>' : ''}
-                    ${request.status === 'تم ارسال الطلب' ? '<p style="color: #17a2b8; font-weight: bold; margin-top: 15px;">📤 تم استلام طلبك وسيتم البدء في معالجته قريباً</p>' : ''}
                 </div>
             `;
 
@@ -718,9 +680,9 @@
 
                 if (result.success) {
                     currentStudent = result.student;
+                    originalStudent = JSON.parse(JSON.stringify(result.student));
                     errorDiv.style.display = 'none';
                     
-                    // Check if student already has a request
                     if (result.existing_request) {
                         showExistingRequest(result.existing_request);
                     } else {
@@ -754,11 +716,12 @@
                 { key: 'LIB_PRN_IND_ARB', label: 'الاسم الشخصي (عربي)', editable: true },
                 { key: 'LIB_NOM_PAT_IND', label: 'الاسم العائلي (بالفرنسية)', editable: true },
                 { key: 'LIB_PR1_IND', label: 'الاسم الشخصي (بالفرنسية)', editable: true },
-              
                 { key: 'CIN_IND', label: 'رقم البطاقة الوطنية', editable: true },
+                { key: 'COD_NNE_IND', label: 'CNE', editable: true },
                 { key: 'DATE_NAI_IND', label: 'تاريخ الازدياد', editable: false },
-               
-                { key: 'LIB_VIL_NAI_ETU', label: 'مكان الازدياد', editable: true }
+          
+                { key: 'LIB_VIL_NAI_ETU', label: 'مكان الازدياد', editable: true },
+                { key: 'LIB_PRN_IND_ARB_1', label: ' مكان الازدياد بالعربية', editable: true },
             ];
 
             dataContainer.innerHTML = fields.map(field => `
@@ -834,9 +797,8 @@
         function handleFileUpload(input, uploadedId) {
             const file = input.files[0];
             if (file) {
-                // Check file size (max 5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت');
+                if (file.size > 3 * 1024 * 1024) {
+                    alert('حجم الملف كبير جداً. الحد الأقصى 3 MB');
                     input.value = '';
                     return;
                 }
@@ -927,8 +889,8 @@
                 const formData = new FormData();
                 formData.append('cod_etu', currentStudent.COD_ETU);
                 formData.append('student_data', JSON.stringify(currentStudent));
+                formData.append('original_student_data', JSON.stringify(originalStudent));
 
-                // Append files with proper names
                 const fileMapping = {
                     'national-id': 'national_id_file',
                     'success-cert': 'success_cert_file',
@@ -971,7 +933,7 @@
             }
         }
 
-        // Add drag and drop functionality
+        // Drag and drop functionality
         document.addEventListener('DOMContentLoaded', function() {
             const fileUploads = document.querySelectorAll('.file-upload');
             

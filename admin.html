@@ -168,6 +168,7 @@
         .stat-approved { color: #27ae60; }
         .stat-rejected { color: #e74c3c; }
         .stat-total { color: #3498db; }
+        .stat-modified { color: #9b59b6; }
 
         .requests-table {
             background: white;
@@ -248,6 +249,64 @@
         .status-طلب-مرفوض {
             background: #f8d7da;
             color: #721c24;
+        }
+
+        .modification-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e74c3c;
+            margin-left: 5px;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .modification-details {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .modification-details h5 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .field-change {
+            margin-bottom: 5px;
+            padding: 5px;
+            background: white;
+            border-radius: 3px;
+        }
+
+        .field-name {
+            font-weight: bold;
+            color: #856404;
+        }
+
+        .field-values {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .original-value {
+            text-decoration: line-through;
+            color: #dc3545;
+        }
+
+        .current-value {
+            color: #28a745;
+            font-weight: bold;
         }
 
         .actions {
@@ -502,6 +561,10 @@
                     <div>طلبات مرفوضة</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-number stat-modified" id="modified-count">-</div>
+                    <div>طلبات معدلة</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-number stat-total" id="total-count">-</div>
                     <div>إجمالي الطلبات</div>
                 </div>
@@ -518,6 +581,11 @@
                             <option value="قيد المعالجة">قيد المعالجة</option>
                             <option value="طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم">معالج - جاهز للاستلام</option>
                             <option value="طلب مرفوض">مرفوض</option>
+                        </select>
+                        <select id="modification-filter" onchange="filterRequests()">
+                            <option value="">جميع الطلبات</option>
+                            <option value="modified">طلبات معدلة فقط</option>
+                            <option value="unmodified">طلبات غير معدلة</option>
                         </select>
                         <button class="btn btn-view" onclick="refreshData()">تحديث</button>
                     </div>
@@ -537,6 +605,7 @@
                                 <th>رمز الطالب</th>
                                 <th>تاريخ الطلب</th>
                                 <th>الحالة</th>
+                                <th>التعديل</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
@@ -563,7 +632,6 @@
             </div>
         </div>
     </div>
-
     <script>
         const API_URL = 'admin_api.php';
         let allRequests = [];
@@ -705,12 +773,14 @@
             const pending = allRequests.filter(req => req.status === 'قيد المعالجة').length;
             const approved = allRequests.filter(req => req.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم').length;
             const rejected = allRequests.filter(req => req.status === 'طلب مرفوض').length;
+            const modified = allRequests.filter(req => req.data_modified == 1).length;
             const total = allRequests.length;
 
             document.getElementById('submitted-count').textContent = submitted;
             document.getElementById('pending-count').textContent = pending;
             document.getElementById('approved-count').textContent = approved;
             document.getElementById('rejected-count').textContent = rejected;
+            document.getElementById('modified-count').textContent = modified;
             document.getElementById('total-count').textContent = total;
         }
 
@@ -725,10 +795,13 @@
             tbody.innerHTML = requests.map(request => {
                 const studentData = JSON.parse(request.student_data || '{}');
                 const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-                // Use Latin date format
                 const createdDate = request.created_at_latin ? 
                     new Date(request.created_at_latin).toLocaleDateString('en-US') : 
                     new Date(request.created_at).toLocaleDateString('en-US');
+                
+                // Check if data was modified
+                const hasModifications = request.modification_details && request.modification_details.has_modifications;
+                const modificationIndicator = hasModifications ? '<span class="modification-indicator" title="تم تعديل البيانات"></span>' : '';
                 
                 return `
                     <tr>
@@ -740,6 +813,10 @@
                             <span class="status-badge ${getStatusClass(request.status)}">
                                 ${getStatusText(request.status)}
                             </span>
+                        </td>
+                        <td>
+                            ${hasModifications ? 'نعم' : 'لا'}
+                            ${modificationIndicator}
                         </td>
                         <td>
                             <div class="actions">
@@ -754,6 +831,20 @@
             }).join('');
 
             document.getElementById('no-requests').style.display = 'none';
+        }
+
+        function getFieldLabel(fieldKey) {
+            const fieldLabels = {
+                'LIB_NOM_IND_ARB': 'الاسم العائلي (عربي)',
+                'LIB_PRN_IND_ARB': 'الاسم الشخصي (عربي)',
+                'LIB_PRN_IND_ARB_1': 'الاسم الثاني (عربي)',
+                'LIB_NOM_PAT_IND': 'الاسم العائلي (بالفرنسية)',
+                'LIB_PR1_IND': 'الاسم الشخصي (بالفرنسية)',
+                'CIN_IND': 'رقم البطاقة الوطنية',
+                'COD_NNE_IND': 'رقم التسجيل الوطني',
+                'LIB_VIL_NAI_ETU': 'مكان الازدياد'
+            };
+            return fieldLabels[fieldKey] || fieldKey;
         }
 
         function getStatusClass(status) {
@@ -816,9 +907,21 @@
 
         function filterRequests() {
             const selectedStatus = document.getElementById('status-filter').value;
-            const filteredRequests = selectedStatus 
-                ? allRequests.filter(req => req.status === selectedStatus)
-                : allRequests;
+            const selectedModification = document.getElementById('modification-filter').value;
+            
+            let filteredRequests = allRequests;
+            
+            // Filter by status
+            if (selectedStatus) {
+                filteredRequests = filteredRequests.filter(req => req.status === selectedStatus);
+            }
+            
+            // Filter by modification
+            if (selectedModification === 'modified') {
+                filteredRequests = filteredRequests.filter(req => req.data_modified == 1);
+            } else if (selectedModification === 'unmodified') {
+                filteredRequests = filteredRequests.filter(req => req.data_modified == 0);
+            }
             
             displayRequests(filteredRequests);
         }
@@ -835,18 +938,40 @@
             const studentData = JSON.parse(request.student_data || '{}');
             const modalContent = document.getElementById('modal-content');
             
+            // Build modification details HTML
+            let modificationHtml = '';
+            if (request.modification_details && request.modification_details.has_modifications) {
+                modificationHtml = `
+                    <div class="modification-details">
+                        <h5>تفاصيل التعديلات المقدمة من الطالب:</h5>
+                        ${Object.entries(request.modification_details.changes).map(([field, change]) => `
+                            <div class="field-change">
+                                <div class="field-name">${getFieldLabel(field)}:</div>
+                                <div class="field-values">
+                                    <span class="original-value">القيمة الأصلية: ${change.original || 'فارغ'}</span><br>
+                                    <span class="current-value">القيمة الجديدة: ${change.current || 'فارغ'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
             modalContent.innerHTML = `
                 <div class="student-info">
                     <h3>بيانات الطالب</h3>
-                    <p><strong>الاسم (عربي):</strong> ${studentData.LIB_PRN_IND_ARB || 'غير محدد'} ${studentData.LIB_NOM_IND_ARB || 'غير محدد'}</p>
+                    <p><strong>الاسم (عربي):</strong> ${studentData.LIB_PRN_IND_ARB || 'غير محدد'} ${studentData.LIB_PRN_IND_ARB_1 || ''} ${studentData.LIB_NOM_IND_ARB || 'غير محدد'}</p>
                     <p><strong>الاسم (لاتيني):</strong> ${studentData.LIB_PR1_IND || 'غير محدد'} ${studentData.LIB_NOM_PAT_IND || 'غير محدد'}</p>
                     <p><strong>رمز الطالب:</strong> ${studentData.COD_ETU || 'غير محدد'}</p>
                     <p><strong>رقم البطاقة الوطنية:</strong> ${studentData.CIN_IND || 'غير محدد'}</p>
+                    <p><strong>رقم التسجيل الوطني:</strong> ${studentData.COD_NNE_IND || 'غير محدد'}</p>
                     <p><strong>تاريخ الميلاد:</strong> ${studentData.DATE_NAI_IND || 'غير محدد'}</p>
                     <p><strong>الجنس:</strong> ${studentData.COD_SEX_ETU === 'M' ? 'ذكر' : studentData.COD_SEX_ETU === 'F' ? 'أنثى' : 'غير محدد'}</p>
                     <p><strong>مدينة الميلاد:</strong> ${studentData.LIB_VIL_NAI_ETU || 'غير محدد'}</p>
                     <p><strong>الحالة الحالية:</strong> <span class="status-badge ${getStatusClass(request.status)}">${getStatusText(request.status)}</span></p>
                 </div>
+
+                ${modificationHtml}
 
                 <h3>المستندات المرفقة</h3>
                 <div class="document-preview">

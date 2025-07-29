@@ -297,28 +297,17 @@ function adminLogout() {
 
 function getRequests($pdo) {
     try {
-        // Create diploma_requests table if it doesn't exist with updated status options
-        $createTable = "CREATE TABLE IF NOT EXISTS diploma_requests (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            request_number VARCHAR(20) UNIQUE NOT NULL,
-            cod_etu VARCHAR(20) NOT NULL,
-            student_data TEXT,
-            national_id_file VARCHAR(255),
-            success_cert_file VARCHAR(255),
-            bac_cert_file VARCHAR(255),
-            status ENUM('تم ارسال الطلب', 'قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'تم ارسال الطلب',
-            admin_notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_cod_etu (cod_etu),
-            INDEX idx_status (status),
-            UNIQUE KEY unique_student_request (cod_etu)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-        
-        $pdo->exec($createTable);
-        
+        // Ensure diploma_requests table has all needed columns for modification tracking
+        try {
+            $pdo->exec("ALTER TABLE diploma_requests ADD COLUMN IF NOT EXISTS original_student_data TEXT");
+            $pdo->exec("ALTER TABLE diploma_requests ADD COLUMN IF NOT EXISTS data_modified TINYINT(1) DEFAULT 0");
+            $pdo->exec("ALTER TABLE diploma_requests ADD COLUMN IF NOT EXISTS modified_fields TEXT");
+        } catch (Exception $e) {
+            // Columns might already exist, ignore error
+        }
+
         // Get all requests with student info
-        $query = "SELECT dr.*, l.LIB_NOM_PAT_IND, l.LIB_PR1_IND, l.LIB_NOM_IND_ARB, l.LIB_PRN_IND_ARB 
+        $query = "SELECT dr.*, l.LIB_NOM_PAT_IND, l.LIB_PR1_IND, l.LIB_NOM_IND_ARB, l.LIB_PRN_IND_ARB, l.LIB_PRN_IND_ARB_1, l.COD_NNE_IND
                   FROM diploma_requests dr 
                   LEFT JOIN laureat l ON dr.cod_etu = l.COD_ETU 
                   ORDER BY dr.created_at DESC";
@@ -328,13 +317,42 @@ function getRequests($pdo) {
         
         $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Convert dates to Latin format
+        // Convert dates to Latin format and add modification info
         foreach ($requests as &$request) {
             if (isset($request['created_at'])) {
                 $request['created_at_latin'] = date('Y-m-d H:i:s', strtotime($request['created_at']));
             }
             if (isset($request['updated_at'])) {
                 $request['updated_at_latin'] = date('Y-m-d H:i:s', strtotime($request['updated_at']));
+            }
+
+            // Add modification details
+            if ($request['data_modified']) {
+                $originalData = json_decode($request['original_student_data'] ?? '{}', true);
+                $currentData = json_decode($request['student_data'] ?? '{}', true);
+                $modifiedFields = json_decode($request['modified_fields'] ?? '[]', true);
+                
+                $request['modification_details'] = [
+                    'has_modifications' => true,
+                    'modified_fields' => $modifiedFields,
+                    'changes' => []
+                ];
+
+                // Compare original vs current data
+                foreach ($modifiedFields as $field) {
+                    if (isset($originalData[$field]) && isset($currentData[$field])) {
+                        $request['modification_details']['changes'][$field] = [
+                            'original' => $originalData[$field],
+                            'current' => $currentData[$field]
+                        ];
+                    }
+                }
+            } else {
+                $request['modification_details'] = [
+                    'has_modifications' => false,
+                    'modified_fields' => [],
+                    'changes' => []
+                ];
             }
         }
         
@@ -425,7 +443,8 @@ function getStatistics($pdo) {
                     SUM(CASE WHEN status = 'تم ارسال الطلب' THEN 1 ELSE 0 END) as submitted,
                     SUM(CASE WHEN status = 'قيد المعالجة' THEN 1 ELSE 0 END) as pending,
                     SUM(CASE WHEN status = 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN status = 'طلب مرفوض' THEN 1 ELSE 0 END) as rejected
+                    SUM(CASE WHEN status = 'طلب مرفوض' THEN 1 ELSE 0 END) as rejected,
+                    SUM(CASE WHEN data_modified = 1 THEN 1 ELSE 0 END) as modified_data
                   FROM diploma_requests";
         
         $stmt = $pdo->prepare($query);

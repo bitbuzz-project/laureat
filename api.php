@@ -154,6 +154,9 @@ function createDiplomaRequestsTable($pdo) {
             request_number VARCHAR(20) UNIQUE NOT NULL,
             cod_etu VARCHAR(20) NOT NULL,
             student_data TEXT,
+            original_student_data TEXT,
+            data_modified TINYINT(1) DEFAULT 0,
+            modified_fields TEXT,
             national_id_file VARCHAR(255),
             success_cert_file VARCHAR(255),
             bac_cert_file VARCHAR(255),
@@ -200,7 +203,7 @@ function handleLogin($pdo) {
             ], 400);
         }
 
-        // Query student
+        // Query student - include new fields
         $stmt = $pdo->prepare("SELECT * FROM laureat WHERE COD_ETU = ?");
         $stmt->execute([$cod_etu]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -304,10 +307,10 @@ function handleUpdateStudent($pdo) {
         $values = [];
         
         foreach ($updates as $field => $value) {
-            // Validate field names to prevent SQL injection
+            // Validate field names to prevent SQL injection - include new fields
             $allowedFields = [
-                'LIB_NOM_IND_ARB', 'LIB_PRN_IND_ARB', 'LIB_NOM_PAT_IND', 
-                'LIB_PR1_IND', 'CIN_IND', 'LIB_VIL_NAI_ETU'
+                'LIB_NOM_IND_ARB', 'LIB_PRN_IND_ARB', 'LIB_PRN_IND_ARB_1', 'LIB_NOM_PAT_IND', 
+                'LIB_PR1_IND', 'CIN_IND', 'COD_NNE_IND', 'LIB_VIL_NAI_ETU'
             ];
             
             if (in_array($field, $allowedFields)) {
@@ -341,6 +344,7 @@ function handleSubmitRequest($pdo) {
     try {
         $codEtu = $_POST['cod_etu'] ?? '';
         $studentData = $_POST['student_data'] ?? '';
+        $originalStudentData = $_POST['original_student_data'] ?? '';
 
         if (empty($codEtu) || empty($studentData)) {
             sendJsonResponse([
@@ -373,7 +377,23 @@ function handleSubmitRequest($pdo) {
             $checkStmt->execute([$requestNumber]);
         }
 
-        // Handle file uploads
+        // Check if data was modified
+        $dataModified = 0;
+        $modifiedFields = [];
+        
+        if (!empty($originalStudentData)) {
+            $currentData = json_decode($studentData, true);
+            $originalData = json_decode($originalStudentData, true);
+            
+            foreach ($currentData as $field => $value) {
+                if (isset($originalData[$field]) && $originalData[$field] !== $value) {
+                    $dataModified = 1;
+                    $modifiedFields[] = $field;
+                }
+            }
+        }
+
+        // Handle file uploads with 3MB limit
         $uploadedFiles = [];
         $fileFields = ['national_id_file', 'success_cert_file', 'bac_cert_file'];
         
@@ -381,11 +401,11 @@ function handleSubmitRequest($pdo) {
             if (isset($_FILES[$field]) && $_FILES[$field]['error'] === UPLOAD_ERR_OK) {
                 $file = $_FILES[$field];
                 
-                // Validate file size (5MB max)
-                if ($file['size'] > 5 * 1024 * 1024) {
+                // Validate file size (3MB max)
+                if ($file['size'] > 3 * 1024 * 1024) {
                     sendJsonResponse([
                         'success' => false,
-                        'message' => 'حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت'
+                        'message' => 'حجم الملف كبير جداً. الحد الأقصى 3 ميجابايت'
                     ]);
                 }
                 
@@ -419,16 +439,20 @@ function handleSubmitRequest($pdo) {
             }
         }
 
-        // Insert request into database with default status 'تم ارسال الطلب'
+        // Insert request into database with modification tracking
         $query = "INSERT INTO diploma_requests 
-                  (request_number, cod_etu, student_data, national_id_file, success_cert_file, bac_cert_file, status) 
-                  VALUES (?, ?, ?, ?, ?, ?, 'تم ارسال الطلب')";
+                  (request_number, cod_etu, student_data, original_student_data, data_modified, modified_fields, 
+                   national_id_file, success_cert_file, bac_cert_file, status) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'تم ارسال الطلب')";
         
         $stmt = $pdo->prepare($query);
         $stmt->execute([
             $requestNumber,
             $codEtu,
             $studentData,
+            $originalStudentData,
+            $dataModified,
+            json_encode($modifiedFields),
             $uploadedFiles['national_id_file'] ?? null,
             $uploadedFiles['success_cert_file'] ?? null,
             $uploadedFiles['bac_cert_file'] ?? null
