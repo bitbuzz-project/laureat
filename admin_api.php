@@ -1,5 +1,5 @@
 <?php
-// admin_api.php - Fixed Admin API with proper table handling
+// admin_api.php - Fixed Admin API with proper table handling and status updates
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -306,7 +306,7 @@ function getRequests($pdo) {
             national_id_file VARCHAR(255),
             success_cert_file VARCHAR(255),
             bac_cert_file VARCHAR(255),
-            status ENUM('قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'قيد المعالجة',
+            status ENUM('تم ارسال الطلب', 'قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'تم ارسال الطلب',
             admin_notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -328,6 +328,16 @@ function getRequests($pdo) {
         
         $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Convert dates to Latin format
+        foreach ($requests as &$request) {
+            if (isset($request['created_at'])) {
+                $request['created_at_latin'] = date('Y-m-d H:i:s', strtotime($request['created_at']));
+            }
+            if (isset($request['updated_at'])) {
+                $request['updated_at_latin'] = date('Y-m-d H:i:s', strtotime($request['updated_at']));
+            }
+        }
+        
         echo json_encode([
             'success' => true, 
             'requests' => $requests
@@ -346,7 +356,7 @@ function updateRequestStatus($pdo) {
     $requestId = $data['request_id'] ?? '';
     $status = $data['status'] ?? '';
     
-    $validStatuses = ['قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض'];
+    $validStatuses = ['تم ارسال الطلب', 'قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض'];
     
     if (!in_array($status, $validStatuses)) {
         echo json_encode(['success' => false, 'message' => 'حالة غير صحيحة']);
@@ -412,6 +422,7 @@ function getStatistics($pdo) {
     try {
         $query = "SELECT 
                     COUNT(*) as total,
+                    SUM(CASE WHEN status = 'تم ارسال الطلب' THEN 1 ELSE 0 END) as submitted,
                     SUM(CASE WHEN status = 'قيد المعالجة' THEN 1 ELSE 0 END) as pending,
                     SUM(CASE WHEN status = 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' THEN 1 ELSE 0 END) as approved,
                     SUM(CASE WHEN status = 'طلب مرفوض' THEN 1 ELSE 0 END) as rejected

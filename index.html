@@ -291,6 +291,10 @@
             margin-top: 20px;
         }
 
+        .status-submitted {
+            border-left: 5px solid #17a2b8;
+        }
+
         .status-pending {
             border-left: 5px solid #f39c12;
         }
@@ -339,8 +343,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>نظام طلب سحب الديبلوم</h1>
-            <p>Diploma Request System</p>
+            <h1> مصلحة الدبلومات</h1>
+          
         </div>
 
         <div class="content">
@@ -359,7 +363,7 @@
                     <h2 style="margin-bottom: 30px; color: #2c3e50;">تتبع حالة الطلب</h2>
                     
                     <div class="form-group">
-                        <label for="status-student-code">رمز الطالب (COD_ETU)</label>
+                        <label for="status-student-code">رقم الطالب (APOGEE)</label>
                         <input type="text" id="status-student-code" placeholder="أدخل رمز الطالب">
                     </div>
 
@@ -383,22 +387,22 @@
                     <h2 style="margin-bottom: 30px; color: #2c3e50;">تسجيل الدخول</h2>
                     
                     <div class="form-group">
-                        <label for="student-code">رمز الطالب (COD_ETU)</label>
-                        <input type="text" id="student-code" placeholder="أدخل رمز الطالب">
+                        <label for="status-student-code">رقم الطالب (APOGEE)</label>
+                        <input type="text" id="student-code" placeholder="أدخل رقم الطالب">
                     </div>
 
                     <div class="form-group">
-                        <label for="birth-date">تاريخ الميلاد (DATE_NAI_IND)</label>
+                        <label for="birth-date">تاريخ الازدياد (DATE DE NAISSANCE)</label>
                         <input type="date" id="birth-date">
                     </div>
 
                     <button class="btn" onclick="login()">دخول</button>
                     
                     <div id="login-error" class="error-message" style="display: none;">
-                        رمز الطالب أو تاريخ الميلاد غير صحيح
+                        رقم الطالب أو تاريخ الازدياد غير صحيح
                     </div>
 
-                    <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
+                    <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">رجوع</button>
                 </div>
             </div>
 
@@ -411,7 +415,7 @@
                         <!-- Request details will be shown here -->
                     </div>
                 </div>
-                <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">العودة</button>
+                <button class="btn btn-secondary" onclick="goBack()" style="margin-top: 20px;">رجوع</button>
             </div>
 
             <!-- Main Steps -->
@@ -438,7 +442,7 @@
 
                 <!-- Step 2: Upload Documents -->
                 <div id="step2" class="step-content" style="display: none;">
-                    <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الثانية: رفع المستندات المطلوبة</h2>
+                    <h2 style="margin-bottom: 20px; color: #2c3e50;">الخطوة الثانية: رفع النسخ المطلوبة</h2>
                     
                     <div class="form-group">
                         <label>صورة البطاقة الوطنية</label>
@@ -499,10 +503,7 @@
                         </ul>
                     </div>
 
-                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-                        <p style="color: #856404; margin-bottom: 10px;"><strong>تنبيه مهم:</strong></p>
-                        <p style="color: #856404;">بعد إرسال الطلب، ستتم مراجعته من قبل الإدارة وسيتم التواصل معك في حالة الموافقة أو الحاجة لمستندات إضافية.</p>
-                    </div>
+               
 
                     <div class="nav-buttons">
                         <button class="btn btn-secondary" onclick="prevStep()">السابق</button>
@@ -515,9 +516,9 @@
             <div id="success-step" class="step-container">
                 <div class="success-message">
                     <h2 style="color: #155724; margin-bottom: 15px;">✅ تم إرسال الطلب بنجاح</h2>
-                    <p>تم إرسال طلب سحب الديبلوم بنجاح. سيتم مراجعة طلبك والتواصل معك قريباً.</p>
+                    <p>تم إرسال الطلب   بنجاح. </p>
                     <p style="margin-top: 15px;"><strong>رقم الطلب:</strong> <span id="request-number"></span></p>
-                    <button class="btn" onclick="location.reload()" style="margin-top: 20px;">العودة للبداية</button>
+                    <button class="btn" onclick="location.reload()" style="margin-top: 20px;">العودة للصفحة الرئيسية</button>
                 </div>
             </div>
         </div>
@@ -606,12 +607,14 @@
         function displayRequestStatus(requests) {
             const resultDiv = document.getElementById('status-result');
             const statusMap = {
+                'تم ارسال الطلب': 'تم إرسال الطلب',
                 'قيد المعالجة': 'قيد المعالجة',
                 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - يرجى الالتحاق بالمصلحة لسحب الديبلوم',
                 'طلب مرفوض': 'طلب مرفوض'
             };
 
             const statusClassMap = {
+                'تم ارسال الطلب': 'status-submitted',
                 'قيد المعالجة': 'status-pending',
                 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'status-approved',
                 'طلب مرفوض': 'status-rejected'
@@ -620,18 +623,22 @@
             resultDiv.innerHTML = requests.map(request => {
                 const studentData = JSON.parse(request.student_data || '{}');
                 const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-                const createdDate = new Date(request.created_at).toLocaleDateString('ar-SA');
+                // Use Latin date format
+                const createdDate = request.created_at_latin ? 
+                    new Date(request.created_at_latin).toLocaleDateString('en-US') : 
+                    new Date(request.created_at).toLocaleDateString('en-US');
                 
                 return `
                     <div class="status-card ${statusClassMap[request.status]}">
                         <h3 style="margin-bottom: 15px; color: #2c3e50;">طلب رقم: ${request.request_number}</h3>
                         <p><strong>الاسم:</strong> ${studentName || 'غير محدد'}</p>
                         <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
-                        <p><strong>الحالة:</strong> ${statusMap[request.status]}</p>
+                        <p><strong>الحالة:</strong> ${statusMap[request.status] || request.status}</p>
                         ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
                         ${request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' ? '<p style="color: #27ae60; font-weight: bold;">✅ يمكنك الآن استلام الديبلوم من الإدارة</p>' : ''}
                         ${request.status === 'طلب مرفوض' ? '<p style="color: #e74c3c; font-weight: bold;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
                         ${request.status === 'قيد المعالجة' ? '<p style="color: #f39c12; font-weight: bold;">⏳ طلبك قيد المراجعة</p>' : ''}
+                        ${request.status === 'تم ارسال الطلب' ? '<p style="color: #17a2b8; font-weight: bold;">📤 تم استلام طلبك وسيتم البدء في معالجته قريباً</p>' : ''}
                     </div>
                 `;
             }).join('');
@@ -641,12 +648,14 @@
 
         function showExistingRequest(request) {
             const statusMap = {
+                'تم ارسال الطلب': 'تم إرسال الطلب',
                 'قيد المعالجة': 'قيد المعالجة',
                 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - يرجى الالتحاق بالمصلحة لسحب الديبلوم',
                 'طلب مرفوض': 'طلب مرفوض'
             };
 
             const statusClassMap = {
+                'تم ارسال الطلب': 'status-submitted',
                 'قيد المعالجة': 'status-pending',
                 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'status-approved',
                 'طلب مرفوض': 'status-rejected'
@@ -654,18 +663,22 @@
 
             const studentData = JSON.parse(request.student_data || '{}');
             const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-            const createdDate = new Date(request.created_at).toLocaleDateString('ar-SA');
+            // Use Latin date format
+            const createdDate = request.created_at_latin ? 
+                new Date(request.created_at_latin).toLocaleDateString('en-US') : 
+                new Date(request.created_at).toLocaleDateString('en-US');
 
             document.getElementById('existing-request-details').innerHTML = `
                 <div class="status-card ${statusClassMap[request.status]}" style="margin-top: 20px;">
                     <h4 style="margin-bottom: 15px; color: #2c3e50;">تفاصيل طلبك الحالي:</h4>
                     <p><strong>رقم الطلب:</strong> ${request.request_number}</p>
                     <p><strong>تاريخ الطلب:</strong> ${createdDate}</p>
-                    <p><strong>الحالة:</strong> ${statusMap[request.status]}</p>
+                    <p><strong>الحالة:</strong> ${statusMap[request.status] || request.status}</p>
                     ${request.admin_notes ? `<p><strong>ملاحظات الإدارة:</strong> ${request.admin_notes}</p>` : ''}
                     ${request.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم' ? '<p style="color: #27ae60; font-weight: bold; margin-top: 15px;">✅ يمكنك استلام الديبلوم من الإدارة الآن!</p>' : ''}
                     ${request.status === 'طلب مرفوض' ? '<p style="color: #e74c3c; font-weight: bold; margin-top: 15px;">❌ تم رفض الطلب - يرجى مراجعة الإدارة</p>' : ''}
                     ${request.status === 'قيد المعالجة' ? '<p style="color: #f39c12; font-weight: bold; margin-top: 15px;">⏳ طلبك قيد المراجعة من قبل الإدارة</p>' : ''}
+                    ${request.status === 'تم ارسال الطلب' ? '<p style="color: #17a2b8; font-weight: bold; margin-top: 15px;">📤 تم استلام طلبك وسيتم البدء في معالجته قريباً</p>' : ''}
                 </div>
             `;
 
@@ -739,13 +752,13 @@
             const fields = [
                 { key: 'LIB_NOM_IND_ARB', label: 'الاسم العائلي (عربي)', editable: true },
                 { key: 'LIB_PRN_IND_ARB', label: 'الاسم الشخصي (عربي)', editable: true },
-                { key: 'LIB_NOM_PAT_IND', label: 'الاسم العائلي (لاتيني)', editable: true },
-                { key: 'LIB_PR1_IND', label: 'الاسم الشخصي (لاتيني)', editable: true },
-                { key: 'COD_ETU', label: 'رمز الطالب', editable: false },
+                { key: 'LIB_NOM_PAT_IND', label: 'الاسم العائلي (بالفرنسية)', editable: true },
+                { key: 'LIB_PR1_IND', label: 'الاسم الشخصي (بالفرنسية)', editable: true },
+              
                 { key: 'CIN_IND', label: 'رقم البطاقة الوطنية', editable: true },
-                { key: 'DATE_NAI_IND', label: 'تاريخ الميلاد', editable: false },
-                { key: 'COD_SEX_ETU', label: 'الجنس', editable: false },
-                { key: 'LIB_VIL_NAI_ETU', label: 'مدينة الميلاد', editable: true }
+                { key: 'DATE_NAI_IND', label: 'تاريخ الازدياد', editable: false },
+               
+                { key: 'LIB_VIL_NAI_ETU', label: 'مكان الازدياد', editable: true }
             ];
 
             dataContainer.innerHTML = fields.map(field => `

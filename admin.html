@@ -144,7 +144,7 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -163,6 +163,7 @@
             margin-bottom: 10px;
         }
 
+        .stat-submitted { color: #17a2b8; }
         .stat-pending { color: #f39c12; }
         .stat-approved { color: #27ae60; }
         .stat-rejected { color: #e74c3c; }
@@ -227,6 +228,11 @@
             display: inline-block;
             min-width: 120px;
             text-align: center;
+        }
+
+        .status-تم-ارسال-الطلب {
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .status-قيد-المعالجة {
@@ -480,6 +486,10 @@
             <!-- Statistics Cards -->
             <div class="stats">
                 <div class="stat-card">
+                    <div class="stat-number stat-submitted" id="submitted-count">-</div>
+                    <div>تم إرسال الطلب</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-number stat-pending" id="pending-count">-</div>
                     <div>قيد المعالجة</div>
                 </div>
@@ -504,6 +514,7 @@
                     <div class="filter-controls">
                         <select id="status-filter" onchange="filterRequests()">
                             <option value="">جميع الحالات</option>
+                            <option value="تم ارسال الطلب">تم إرسال الطلب</option>
                             <option value="قيد المعالجة">قيد المعالجة</option>
                             <option value="طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم">معالج - جاهز للاستلام</option>
                             <option value="طلب مرفوض">مرفوض</option>
@@ -690,11 +701,13 @@
         }
 
         function updateStatistics() {
+            const submitted = allRequests.filter(req => req.status === 'تم ارسال الطلب').length;
             const pending = allRequests.filter(req => req.status === 'قيد المعالجة').length;
             const approved = allRequests.filter(req => req.status === 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم').length;
             const rejected = allRequests.filter(req => req.status === 'طلب مرفوض').length;
             const total = allRequests.length;
 
+            document.getElementById('submitted-count').textContent = submitted;
             document.getElementById('pending-count').textContent = pending;
             document.getElementById('approved-count').textContent = approved;
             document.getElementById('rejected-count').textContent = rejected;
@@ -712,7 +725,10 @@
             tbody.innerHTML = requests.map(request => {
                 const studentData = JSON.parse(request.student_data || '{}');
                 const studentName = `${studentData.LIB_PRN_IND_ARB || ''} ${studentData.LIB_NOM_IND_ARB || ''}`.trim();
-                const createdDate = new Date(request.created_at).toLocaleDateString('ar-SA');
+                // Use Latin date format
+                const createdDate = request.created_at_latin ? 
+                    new Date(request.created_at_latin).toLocaleDateString('en-US') : 
+                    new Date(request.created_at).toLocaleDateString('en-US');
                 
                 return `
                     <tr>
@@ -746,6 +762,7 @@
 
         function getStatusText(status) {
             const statusMap = {
+                'تم ارسال الطلب': 'تم إرسال الطلب',
                 'قيد المعالجة': 'قيد المعالجة',
                 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم': 'معالج - جاهز للاستلام',
                 'طلب مرفوض': 'طلب مرفوض'
@@ -754,7 +771,19 @@
         }
 
         function getStatusButtons(request) {
-            if (request.status === 'قيد المعالجة') {
+            if (request.status === 'تم ارسال الطلب') {
+                return `
+                    <button class="btn btn-process" onclick="updateStatus(${request.id}, 'قيد المعالجة')">
+                        قيد المعالجة
+                    </button>
+                    <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم')">
+                        معالج
+                    </button>
+                    <button class="btn btn-reject" onclick="updateStatus(${request.id}, 'طلب مرفوض')">
+                        رفض
+                    </button>
+                `;
+            } else if (request.status === 'قيد المعالجة') {
                 return `
                     <button class="btn btn-approve" onclick="updateStatus(${request.id}, 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم')">
                         معالج

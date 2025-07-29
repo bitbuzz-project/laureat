@@ -1,7 +1,12 @@
 <?php
-// api.php - Updated with duplicate request prevention
+// api.php - Debug version with better error handling
 
-// CORS Headers
+// Turn off HTML error display and ensure JSON output
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+// CORS Headers - MUST be first
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -14,39 +19,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-
 // Function to send JSON response safely
 function sendJsonResponse($data, $httpCode = 200) {
+    // Clear any previous output
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
     http_response_code($httpCode);
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit();
 }
 
-// Create uploads directory if it doesn't exist
-$uploadsDir = 'uploads';
-if (!file_exists($uploadsDir)) {
-    mkdir($uploadsDir, 0755, true);
+// Function to handle fatal errors
+function handleFatalError() {
+    $error = error_get_last();
+    if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_COMPILE_ERROR)) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في الخادم',
+            'debug' => 'Fatal error occurred'
+        ], 500);
+    }
 }
+register_shutdown_function('handleFatalError');
+
+// Start output buffering to catch any unwanted output
+ob_start();
 
 try {
-    // Database configuration
-    $host = 'localhost';
-    $dbname = 'laureat';
-    $username = 'root';
-    $password = '';
+    // Create uploads directory if it doesn't exist
+    $uploadsDir = 'uploads';
+    if (!file_exists($uploadsDir)) {
+        mkdir($uploadsDir, 0755, true);
+    }
 
-    // Database connection
+    // Database configuration - UPDATE THESE IF NEEDED
+    $host = 'localhost';
+    $dbname = 'laureat';  // Make sure this database exists
+    $username = 'root';   // Your MySQL username
+    $password = '';       // Your MySQL password
+
+    // Test database connection first
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        // Test if laureat table exists
+        $stmt = $pdo->query("SHOW TABLES LIKE 'laureat'");
+        if ($stmt->rowCount() == 0) {
+            sendJsonResponse([
+                'success' => false,
+                'message' => 'جدول البيانات غير موجود',
+                'debug' => 'Table "laureat" not found in database'
+            ], 500);
+        }
+        
     } catch (PDOException $e) {
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في الاتصال بقاعدة البيانات: ' . $e->getMessage()
+            'message' => 'خطأ في الاتصال بقاعدة البيانات',
+            'debug' => $e->getMessage(),
+            'connection_info' => [
+                'host' => $host,
+                'database' => $dbname,
+                'username' => $username
+            ]
         ], 500);
     }
 
@@ -66,7 +104,8 @@ try {
                     'php_version' => phpversion(),
                     'server' => $_SERVER['SERVER_NAME'] ?? 'localhost',
                     'method' => $_SERVER['REQUEST_METHOD'],
-                    'uploads_dir' => is_writable($uploadsDir) ? 'writable' : 'not writable'
+                    'uploads_dir' => is_writable($uploadsDir) ? 'writable' : 'not writable',
+                    'database_connected' => 'yes'
                 ]
             ]);
             break;
@@ -102,30 +141,40 @@ try {
     sendJsonResponse([
         'success' => false,
         'message' => 'خطأ عام في الخادم',
-        'error' => $e->getMessage()
+        'debug' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
     ], 500);
 }
 
 function createDiplomaRequestsTable($pdo) {
-    $createTable = "CREATE TABLE IF NOT EXISTS diploma_requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        request_number VARCHAR(20) UNIQUE NOT NULL,
-        cod_etu VARCHAR(20) NOT NULL,
-        student_data TEXT,
-        national_id_file VARCHAR(255),
-        success_cert_file VARCHAR(255),
-        bac_cert_file VARCHAR(255),
-        status ENUM('قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'قيد المعالجة',
-        admin_notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_cod_etu (cod_etu),
-        INDEX idx_status (status),
-        INDEX idx_request_number (request_number),
-        UNIQUE KEY unique_student_request (cod_etu)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-    
-    $pdo->exec($createTable);
+    try {
+        $createTable = "CREATE TABLE IF NOT EXISTS diploma_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            request_number VARCHAR(20) UNIQUE NOT NULL,
+            cod_etu VARCHAR(20) NOT NULL,
+            student_data TEXT,
+            national_id_file VARCHAR(255),
+            success_cert_file VARCHAR(255),
+            bac_cert_file VARCHAR(255),
+            status ENUM('تم ارسال الطلب', 'قيد المعالجة', 'طلب معالج يرجى الالتحاق بالمصلحة لسحب الديبلوم', 'طلب مرفوض') DEFAULT 'تم ارسال الطلب',
+            admin_notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_cod_etu (cod_etu),
+            INDEX idx_status (status),
+            INDEX idx_request_number (request_number),
+            UNIQUE KEY unique_student_request (cod_etu)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+        
+        $pdo->exec($createTable);
+    } catch (Exception $e) {
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'خطأ في إنشاء جدول الطلبات',
+            'debug' => $e->getMessage()
+        ], 500);
+    }
 }
 
 function handleLogin($pdo) {
@@ -136,7 +185,8 @@ function handleLogin($pdo) {
         if (!$data) {
             sendJsonResponse([
                 'success' => false,
-                'message' => 'بيانات غير صحيحة'
+                'message' => 'بيانات غير صحيحة',
+                'debug' => 'Invalid JSON input'
             ], 400);
         }
 
@@ -171,7 +221,7 @@ function handleLogin($pdo) {
             $checkStmt->execute([$cod_etu]);
             $existingRequest = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-            // Prepare student data for frontend
+            // Convert date to Latin format before sending
             $student['DATE_NAI_IND'] = $storedDate;
             
             sendJsonResponse([
@@ -183,14 +233,20 @@ function handleLogin($pdo) {
         } else {
             sendJsonResponse([
                 'success' => false,
-                'message' => 'تاريخ الميلاد غير صحيح'
+                'message' => 'تاريخ الميلاد غير صحيح',
+                'debug' => [
+                    'stored_date' => $storedDate,
+                    'provided_date' => $date_nai,
+                    'original_stored' => $student['DATE_NAI_IND']
+                ]
             ]);
         }
 
     } catch (Exception $e) {
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في تسجيل الدخول: ' . $e->getMessage()
+            'message' => 'خطأ في تسجيل الدخول',
+            'debug' => $e->getMessage()
         ], 500);
     }
 }
@@ -222,7 +278,8 @@ function handleCheckExistingRequest($pdo) {
     } catch (Exception $e) {
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في التحقق من الطلب: ' . $e->getMessage()
+            'message' => 'خطأ في التحقق من الطلب',
+            'debug' => $e->getMessage()
         ], 500);
     }
 }
@@ -274,7 +331,8 @@ function handleUpdateStudent($pdo) {
     } catch (Exception $e) {
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في تحديث البيانات: ' . $e->getMessage()
+            'message' => 'خطأ في تحديث البيانات',
+            'debug' => $e->getMessage()
         ], 500);
     }
 }
@@ -361,10 +419,10 @@ function handleSubmitRequest($pdo) {
             }
         }
 
-        // Insert request into database
+        // Insert request into database with default status 'تم ارسال الطلب'
         $query = "INSERT INTO diploma_requests 
                   (request_number, cod_etu, student_data, national_id_file, success_cert_file, bac_cert_file, status) 
-                  VALUES (?, ?, ?, ?, ?, ?, 'قيد المعالجة')";
+                  VALUES (?, ?, ?, ?, ?, ?, 'تم ارسال الطلب')";
         
         $stmt = $pdo->prepare($query);
         $stmt->execute([
@@ -393,7 +451,8 @@ function handleSubmitRequest($pdo) {
         
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في إرسال الطلب: ' . $e->getMessage()
+            'message' => 'خطأ في إرسال الطلب',
+            'debug' => $e->getMessage()
         ], 500);
     }
 }
@@ -426,6 +485,16 @@ function handleCheckStatus($pdo) {
             ]);
         }
 
+        // Convert dates to Latin format in requests
+        foreach ($requests as &$request) {
+            if (isset($request['created_at'])) {
+                $request['created_at_latin'] = date('Y-m-d H:i:s', strtotime($request['created_at']));
+            }
+            if (isset($request['updated_at'])) {
+                $request['updated_at_latin'] = date('Y-m-d H:i:s', strtotime($request['updated_at']));
+            }
+        }
+
         sendJsonResponse([
             'success' => true,
             'requests' => $requests,
@@ -435,7 +504,8 @@ function handleCheckStatus($pdo) {
     } catch (Exception $e) {
         sendJsonResponse([
             'success' => false,
-            'message' => 'خطأ في البحث عن الطلب: ' . $e->getMessage()
+            'message' => 'خطأ في البحث عن الطلب',
+            'debug' => $e->getMessage()
         ], 500);
     }
 }
@@ -446,6 +516,14 @@ function convertTextDateToStandard($textDate) {
     }
 
     $textDate = trim($textDate);
+
+    // Remove Arabic/Hijri date patterns and extract Latin date
+    // Handle patterns like "٤‏/٢‏/١٤٤٧ هـ" - skip Hijri dates
+    if (preg_match('/[\u0660-\u0669\u06F0-\u06F9]/', $textDate) || strpos($textDate, 'هـ') !== false) {
+        // This is likely a Hijri date, we need to convert or handle it differently
+        // For now, return null or a default value
+        return null;
+    }
 
     // Handle American format like "6/29/1992" (M/D/YYYY)
     if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $textDate)) {
@@ -537,4 +615,7 @@ function convertTextDateToStandard($textDate) {
 
     return null;
 }
+
+// Clear output buffer and end
+ob_end_clean();
 ?>
